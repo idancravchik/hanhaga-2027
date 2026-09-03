@@ -9,6 +9,7 @@
     "build:main": "npm run build --prefix apps/main",
     "build": "node scripts/build.mjs",
     "type-check": "npm run type-check --prefix apps/main",
-    "lint": "npm run lint --prefix apps/main"
+    "lint": "npm run lint --prefix apps/main",
+    "seed:admin": "node scripts/seed-admin.mjs"
   }
 }
