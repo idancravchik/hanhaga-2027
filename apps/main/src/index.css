@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+@theme {
+  /* Colors */
+  --color-canvas-white: #f8f9fa;
+  --color-charcoal-ink: #202124;
+  --color-graphite: #3c4043;
+  --color-slate: #5f6368;
+  --color-mist: #dadce0;
+  --color-cloud-shadow: #c4c6c7;
+  --color-google-blue: #1a73e8;
+  --color-google-blue-deep: #1967d2;
+  --color-classroom-green: #188038;
+
+  /* Typography — Font Families with Open Sans Hebrew fallback */
+  --font-google-sans-display: 'Google Sans Display', 'Open Sans', 'Inter', 'Assistant', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-google-sans-text: 'Google Sans Text', 'Open Sans', 'Inter', 'Assistant', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans: 'Google Sans Text', 'Open Sans', 'Inter', 'Assistant', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Typography — Scale */
+  --text-caption: 12px;
+  --text-body-sm: 14px;
+  --text-body: 16px;
+  --text-subheading: 18px;
+  --text-heading-sm: 22px;
+  --text-heading: 28px;
+  --text-heading-lg: 48px;
+  --text-display: 80px;
+
+  /* Border Radius */
+  --radius-card: 24px;
+  --radius-modal: 8px;
+  --radius-input: 4px;
+  --radius-pill: 200px;
+
+  /* Surfaces */
+  --surface-canvas: #f8f9fa;
+  --surface-card: #ffffff;
+  --surface-panel-tint: #e8f0fe;
+  --surface-scrim: rgba(32, 33, 36, 0.5);
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  max-width: 100vw;
+  overflow-x: hidden;
+  font-family: var(--font-sans);
+  background-color: #f8f9fa;
+  background-image: url('/hiking-bg.jpg');
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  color: #202124;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Mobile responsive background image */
+@media (max-width: 640px) {
+  html, body {
+    background-image: url('/hiking-bg-mobile.jpg');
+    background-size: cover;
+    background-position: center center;
+    background-attachment: scroll;
+  }
+}
+
+/* Typographic layout & legibility rules (modern-web-guidance) */
+h1, h2, h3, h4, h5, h6 {
+  text-wrap: balance;
+  overflow-wrap: break-word;
+}
+
+p, blockquote, li, span {
+  text-wrap: pretty;
+  overflow-wrap: break-word;
+}
+
+/* Hide scrollbar for clean horizontal tabs */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Custom Google style scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #dadce0;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #bdc1c6;
+}

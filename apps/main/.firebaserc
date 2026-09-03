@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "hanhaga-2026"
+  },
+  "targets": {
+    "hanhaga-2026": {
+      "hosting": {
+        "main": [
+          "hanhaga-2026"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

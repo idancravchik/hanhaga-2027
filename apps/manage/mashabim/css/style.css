@@ -1,0 +1,142 @@
+body {
+    margin: 0;
+}
+main {
+    background-color: #f8f9fa;
+    height: 100vh;
+    padding: 1rem;
+}
+.card {
+    width: 200px;
+    height: fit-content;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+    border-radius: 1rem;
+    gap: 1rem;
+
+    background-color: #ffffff;
+    border: #dadcd0 solid 1px;
+}
+h2 {
+    font-family: 'google sans', heboo, sans-serif;
+    font-size: 1.5rem;
+    font-weight: normal;
+    margin: 0 1rem;
+    text-align: right;
+}
+h3 {
+    font-family: 'google sans', heboo, sans-serif;
+    font-size: 1rem;
+    font-weight: bolder;
+    padding: 0;
+    margin: 0 1rem;
+}
+h4 {
+    font-family: 'google sans', heboo, sans-serif;
+    font-size: 1rem;
+    font-weight: normal;
+    padding: 0;
+    margin: 0 1rem;
+}
+.parameter {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.hr-card {
+    margin: 0;
+    border: gray inset 0.25px;
+}
+.card-cols {
+    display: flex;
+    flex-direction: row;
+    gap: 0.5rem;
+}
+.col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.prefers {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.prefer-card {
+    display: flex;
+    flex-direction: column;
+    background-color: #34A853;
+    color: #ffffff;
+    border-radius: 4rem;
+}
+
+.prefer-card.green {
+    background-color: #34A853;
+}
+.prefer-card.yellow {
+    background-color: #FBBC05;
+}
+.prefer-card.red {
+    background-color: #EA4335;
+}
+.prefer-card.neutral {
+    background-color: #9aa0a6;
+}
+.grade.green {
+    color: #34A853;
+}
+.grade.yellow {
+    color: #FBBC05;
+}
+.grade.red {
+    color: #EA4335;
+}
+.grade.neutral {
+    color: #9aa0a6;
+}
+
+#card-image {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    border-radius: 0.5rem;
+}
+
+.prefer-card h2 {
+    text-align: center;
+}
+.grade-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.grade-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    text-align: right;
+}
+h5 {
+    font-family: 'google sans', heboo, sans-serif;
+    font-size: 2rem;
+    font-weight: lighter;
+    padding: 0;
+    margin: 0 1rem;
+}
+.interview-field {
+    width: auto;
+    height: fit-content;
+    white-space: pre-line;
+    word-break: break-word;
+}
+select {
+    font-family: 'google sans', heboo, sans-serif;
+    font-size: 3rem;
+    font-weight: normal;
+    text-align: right;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+}

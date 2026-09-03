@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+    <title>מיוני מש"בים</title>
+  </head>
+  <body>
+    <main>
+      <section>
+        <select id="userSelect">
+          <option value="" selected>בחר מתמיין</option>
+        </select>
+        <hr />
+      </section>
+      <section class="cards">
+        <div class="card-cols">
+          <div class="card">
+            <!--פרטים אישיים-->
+            <img
+              src="media/placeholder.png"
+              id="card-image"
+              alt="תמונת פרופיל"
+            />
+            <h2>פרטים אישיים</h2>
+            <hr class="hr-card" />
+            <div class="parameter">
+              <h3>בית ספר:</h3>
+              <h4 id="school">-</h4>
+            </div>
+            <div class="parameter">
+              <h3>מין:</h3>
+              <h4 id="gender">-</h4>
+            </div>
+            <div class="parameter">
+              <h3>שכבה:</h3>
+              <h4 id="grade">-</h4>
+            </div>
+            <div class="parameter">
+              <h3>טלפון:</h3>
+              <h4 id="telephone">-</h4>
+            </div>
+          </div>
+          <div class="col">
+            <!--עמודה 2-->
+            <div class="card">
+              <!--קורסים-->
+              <h2>קורסים</h2>
+              <hr class="hr-card" />
+              <div class="parameter">
+                <h3>עבר בסיסי בקורס</h3>
+                <h4 id="base-course">-</h4>
+              </div>
+              <div class="parameter">
+                <h3>עבר הנהגה במחלקה</h3>
+                <h4 id="group">-</h4>
+              </div>
+              <div class="parameter">
+                <h3>קורסים נוספים</h3>
+                <h4 id="additional-courses">-</h4>
+              </div>
+            </div>
+            <div class="card">
+              <!--העדפות-->
+              <h2>העדפות</h2>
+              <hr class="hr-card" />
+              <div class="prefers">
+                <div class="prefer-card neutral" id="prefer-instructor">
+                  <h2>הדרכה</h2>
+                </div>
+                <div class="prefer-card neutral" id="prefer-logistics">
+                  <h2>מנהלה</h2>
+                </div>
+                <div class="prefer-card neutral" id="prefer-social">
+                  <h2>סושיאל</h2>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!--עמודה 3-->
+          <div class="col">
+            <div class="card">
+              <!--ציוני מיונים-->
+              <h2>ציוני מיונים</h2>
+              <hr class="hr-card" />
+              <div class="grade-chart">
+                <div class="grade-row">
+                  <h3>הדרכה:</h3>
+                  <h5 class="grade neutral" id="grade-instruct">-</h5>
+                </div>
+                <div class="grade-row">
+                  <h3>כפיתות:</h3>
+                  <h5 class="grade neutral" id="grade-knots">-</h5>
+                </div>
+                <div class="grade-row">
+                  <h3>ניהול:</h3>
+                  <h5 class="grade neutral" id="grade-manage">-</h5>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <!--התרשמות מראיון-->
+              <h2>התרשמות מראיון</h2>
+              <hr class="hr-card" />
+              <h4 class="interview-field" id="interview-impression">
+                טרם נבחר מתמיין
+              </h4>
+            </div>
+          </div>
+          <!--עמודה 4-->
+          <div class="col">
+            <div class="card">
+              <h2>למה אתה חושב שאתה מתאים?</h2>
+              <hr class="hr-card" />
+              <h4 class="interview-field" id="fit-reason">
+                טרם נבחר מתמיין
+              </h4>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card">
+              <h2>איזה תכונה חשובה במש"ב?</h2>
+              <hr class="hr-card" />
+              <h4 class="interview-field" id="important-trait">
+                טרם נבחר מתמיין
+              </h4>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card">
+              <h2>עוד משהו?</h2>
+              <hr class="hr-card" />
+              <h4 class="interview-field" id="additional-notes">
+                טרם נבחר מתמיין
+              </h4>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+    <script src="js/main.js"></script>
+  </body>
+</html>
