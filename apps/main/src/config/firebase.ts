@@ -4,12 +4,12 @@ import { getFirestore, Firestore } from 'firebase/firestore';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider, AppCheck } from 'firebase/app-check';
 
 const firebaseConfig = {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "",
-    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
-    appId: import.meta.env.VITE_FIREBASE_APP_ID || "",
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyCx7BmNiBLy9OU-tlWRB7oyt6c49MHEIfw",
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "hanhaga-2027.firebaseapp.com",
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "hanhaga-2027",
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "hanhaga-2027.firebasestorage.app",
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "156191791138",
+    appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:156191791138:web:3cf47b3df091f14204927b",
     measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || ""
 };
 
@@ -27,7 +27,7 @@ try {
 
     // Initialize App Check with reCAPTCHA v3 (optional)
     if (typeof window !== 'undefined') {
-        const siteKey = import.meta.env.VITE_FIREBASE_RECAPTCHA_SITE_KEY;
+        const siteKey = import.meta.env.VITE_FIREBASE_RECAPTCHA_SITE_KEY || "6LdbB6ktAAAAAGjTdkZAEDZPLfo1dkfviDJ6x-vU";
         if (siteKey && siteKey.trim() !== '') {
             try {
                 if (import.meta.env.DEV) {
