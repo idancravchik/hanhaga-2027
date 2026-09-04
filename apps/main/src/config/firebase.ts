@@ -1,7 +1,7 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
-import { initializeAppCheck, ReCaptchaV3Provider, AppCheck } from 'firebase/app-check';
+import { initializeAppCheck, ReCaptchaEnterpriseProvider, AppCheck } from 'firebase/app-check';
 
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
@@ -35,7 +35,7 @@ try {
                     self.FIREBASE_APPCHECK_EXECUTE_IN_GLOBAL_SCOPE = true;
                 }
                 appCheck = initializeAppCheck(app, {
-                    provider: new ReCaptchaV3Provider(siteKey.trim()),
+                    provider: new ReCaptchaEnterpriseProvider(siteKey.trim()),
                     isTokenAutoRefreshEnabled: true
                 });
             } catch (acErr) {
