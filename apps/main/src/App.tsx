@@ -106,6 +106,28 @@ const AppContent: React.FC = () => {
         };
     }, [user]);
 
+    // Auto-persist admin profile to Firestore if not already present
+    useEffect(() => {
+        if (!user || !profile || profile.role !== 'admin' || !profile.phone) return;
+        const phone = profile.phone;
+        const exists = usersList.some((u) => u.phone === phone || u.id === phone);
+        if (!exists) {
+            const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', phone);
+            setDoc(userRef, {
+                id: phone,
+                name: profile.name || profile.fullName || "עידן קרבצ'יק",
+                fullName: profile.fullName || profile.name || "עידן קרבצ'יק",
+                phone: phone,
+                role: 'admin',
+                school: profile.school || 'מנהלה',
+                tags: profile.tags || [],
+                createdAt: new Date().toISOString()
+            }, { merge: true }).catch((err) => {
+                console.warn('Syncing admin user to Firestore:', err);
+            });
+        }
+    }, [user, profile, usersList]);
+
     // Scoped Data Fetching for Student vs Staff
     useEffect(() => {
         if (!user || !profile) {

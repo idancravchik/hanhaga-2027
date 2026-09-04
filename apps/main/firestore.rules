@@ -7,13 +7,13 @@ service cloud.firestore {
     }
 
     // Config & Settings
-    match /artifacts/hanhaga-2026/public/config {
+    match /artifacts/{appId}/public/config {
       allow read: if true;
       allow write: if isAuthenticated();
     }
     
     // App Data Collections (Users, Exams, Grades, Notes, Attendance, Events)
-    match /artifacts/hanhaga-2026/public/data/{document=**} {
+    match /artifacts/{appId}/public/data/{document=**} {
       allow read, write: if isAuthenticated();
     }
   }

@@ -194,6 +194,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
 
         if (!found) {
+            // Master Admin Bootstrap: allow initial login for system owner if not yet in database
+            if (normName === normalizeName("עידן קרבצ'יק") && normPhone === normalizePhone("0507117791")) {
+                const masterAdmin: UserProfile = {
+                    id: "0507117791",
+                    name: "עידן קרבצ'יק",
+                    fullName: "עידן קרבצ'יק",
+                    phone: "0507117791",
+                    role: "admin",
+                    school: "מנהלה",
+                    tags: []
+                };
+                setSessionProfile(masterAdmin);
+                return { success: true };
+            }
             return { success: false, message: 'איש צוות לא נמצא במערכת.' };
         }
 
