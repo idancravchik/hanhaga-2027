@@ -25,19 +25,22 @@ try {
     db = getFirestore(app);
     auth = getAuth(app);
 
-    // Initialize App Check with reCAPTCHA v3
+    // Initialize App Check with reCAPTCHA v3 (optional)
     if (typeof window !== 'undefined') {
         const siteKey = import.meta.env.VITE_FIREBASE_RECAPTCHA_SITE_KEY;
-        if (siteKey) {
-            // Enable debug token for localhost development if in DEV mode
-            if (import.meta.env.DEV) {
-                // @ts-ignore - self.FIREBASE_APPCHECK_EXECUTE_IN_GLOBAL_SCOPE
-                self.FIREBASE_APPCHECK_EXECUTE_IN_GLOBAL_SCOPE = true;
+        if (siteKey && siteKey.trim() !== '') {
+            try {
+                if (import.meta.env.DEV) {
+                    // @ts-ignore - self.FIREBASE_APPCHECK_EXECUTE_IN_GLOBAL_SCOPE
+                    self.FIREBASE_APPCHECK_EXECUTE_IN_GLOBAL_SCOPE = true;
+                }
+                appCheck = initializeAppCheck(app, {
+                    provider: new ReCaptchaV3Provider(siteKey.trim()),
+                    isTokenAutoRefreshEnabled: true
+                });
+            } catch (acErr) {
+                console.warn('App Check initialization bypassed:', acErr);
             }
-            appCheck = initializeAppCheck(app, {
-                provider: new ReCaptchaV3Provider(siteKey),
-                isTokenAutoRefreshEnabled: true
-            });
         }
     }
 } catch (e) {
