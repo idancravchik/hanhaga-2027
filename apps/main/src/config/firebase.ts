@@ -9,7 +9,7 @@ const firebaseConfig = {
     projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "hanhaga-2027",
     storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "hanhaga-2027.firebasestorage.app",
     messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "156191791138",
-    appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:156191791138:web:3cf47b3df091f14204927b",
+    appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:156191791138:web:30b0010e0d18b17204927b",
     measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || ""
 };
 

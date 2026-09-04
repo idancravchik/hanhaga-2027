@@ -5,8 +5,9 @@ yarn-debug.log*
 yarn-error.log*
 
 # Build outputs
-dist/
-public/
+/dist/
+/public/
+apps/main/dist/
 
 # Environment variables
 .env.local
