@@ -90,7 +90,7 @@ export const GameView: React.FC = () => {
         
         {/* Floating In-Game Toast */}
         {toastMessage && (
-          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-black/90 text-[#ffb703] border-2 border-[#ffb703] px-5 py-2.5 rounded-2xl shadow-2xl text-xs sm:text-sm font-black animate-slideDown max-w-md text-center">
+          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-[#FFFDF0] text-black border-4 border-black px-5 py-2 rounded-2xl text-xs sm:text-sm font-black max-w-md text-center">
             {toastMessage}
           </div>
         )}
@@ -104,9 +104,6 @@ export const GameView: React.FC = () => {
           <NavigationHud
             session={session}
             onOpenScanner={() => setIsScannerOpen(true)}
-            onManualSelectStation={(stationId) => openStation(stationId)}
-            onFinishGame={finishGame}
-            onResetGame={resetGame}
           />
         )}
 
