@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, X, Smartphone, RotateCw } from 'lucide-react';
 import { kioskUtils } from '../utils/kioskUtils';
+import { soundEngine } from '../utils/audioUtils';
 
 interface RegistrationScreenProps {
   onStartGame: (teamName: string, members: string[]) => void;
@@ -46,12 +47,13 @@ export const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ onStartG
   };
 
   const proceedToStart = async () => {
+    soundEngine.init();
     await kioskUtils.requestFullscreen();
     await kioskUtils.requestWakeLock();
     onStartGame(teamName.trim(), members);
   };
 
-  const handleStartClick = () => {
+  const handleStartClick = async () => {
     if (!teamName.trim()) {
       setError('הזינו שם קבוצה');
       return;
@@ -60,6 +62,20 @@ export const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ onStartG
       setError('הוסיפו משתתף/ת');
       return;
     }
+
+    // Pre-request camera permission while in portrait (before fullscreen)
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' },
+        });
+        stream.getTracks().forEach((track) => track.stop());
+      }
+    } catch (camErr) {
+      console.info('Pre-warmed camera permission handled:', camErr);
+    }
+
+    soundEngine.init();
 
     const isPortrait = window.innerHeight > window.innerWidth;
     if (isPortrait) {

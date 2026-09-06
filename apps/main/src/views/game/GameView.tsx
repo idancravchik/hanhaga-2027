@@ -70,15 +70,15 @@ export const GameView: React.FC = () => {
     }
 
     const unbind = kioskUtils.onFullscreenChange((isFullscreen) => {
-      if (!isFullscreen && session.status === 'navigation') {
+      if (!isFullscreen && session.status === 'navigation' && !isScannerOpen) {
         setIsFullscreenExited(true);
-      } else {
+      } else if (isFullscreen) {
         setIsFullscreenExited(false);
       }
     });
 
     return unbind;
-  }, [session.status]);
+  }, [session.status, isScannerOpen]);
 
   // Active station
   const activeStation = STATIONS.find((s) => s.id === session.activeStationId) || null;
@@ -87,6 +87,7 @@ export const GameView: React.FC = () => {
   const handleQrScan = useCallback(
     (decodedText: string) => {
       setIsScannerOpen(false);
+      kioskUtils.requestFullscreen().catch(() => {});
       const cleanText = decodedText.trim();
 
       const foundStation = STATIONS.find((st) => {
@@ -177,7 +178,10 @@ export const GameView: React.FC = () => {
           {/* QR Scanner */}
           <QrScannerModal
             isOpen={isScannerOpen}
-            onClose={() => setIsScannerOpen(false)}
+            onClose={() => {
+              setIsScannerOpen(false);
+              kioskUtils.requestFullscreen().catch(() => {});
+            }}
             onScanSuccess={handleQrScan}
           />
 

@@ -24,6 +24,10 @@ function getAudioContext(): AudioContext | null {
 }
 
 export const soundEngine = {
+  init() {
+    getAudioContext();
+  },
+
   toggleMute(): boolean {
     isMuted = !isMuted;
     return isMuted;
