@@ -14,21 +14,32 @@ import LoginView from './views/LoginView';
 import AdminView from './views/AdminView';
 import InstructorView from './views/InstructorView';
 import StudentView from './views/StudentView';
+import GameView from './views/game/GameView';
 
 const AppContent: React.FC = () => {
     const { user, profile, role, loading: authLoading, logout } = useAuth();
 
+    const isGameRoute = () => {
+        if (typeof window === 'undefined') return false;
+        const p = window.location.pathname.toLowerCase();
+        const h = window.location.hash.toLowerCase();
+        const s = window.location.search.toLowerCase();
+        return p === '/game' || p.startsWith('/game/') || h.includes('game') || s.includes('game');
+    };
+
     const [view, setViewInternal] = useState<string>(() => {
+        if (isGameRoute()) return 'game';
         return profile ? (profile.role || 'student').toLowerCase() : 'login';
     });
 
     useEffect(() => {
+        if (view === 'game' || isGameRoute()) return;
         if (profile) {
             setViewInternal((profile.role || 'student').toLowerCase());
         } else {
             setViewInternal('login');
         }
-    }, [profile]);
+    }, [profile, view]);
 
     const setView = (newView: string, push = true) => {
         if (newView === 'login') {
@@ -220,6 +231,10 @@ const AppContent: React.FC = () => {
             showToast('שגיאה במחיקת המשתמש', 'error');
         }
     };
+
+    if (view === 'game' || isGameRoute()) {
+        return <GameView />;
+    }
 
     if (authLoading) {
         return (
