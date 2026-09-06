@@ -17,7 +17,7 @@ export const GameSummaryScreen: React.FC<GameSummaryScreenProps> = ({
   onRestart,
 }) => {
   return (
-    <div className="w-screen h-screen overflow-hidden select-none bg-[#70C1B3] flex items-center justify-center p-4">
+    <div className="fixed inset-0 w-screen h-[100dvh] overflow-hidden select-none bg-[#70C1B3] flex items-center justify-center p-3 touch-none">
       {/* Cartoon Background Elements (Flat SVG) */}
       <svg
         className="absolute inset-0 w-full h-full pointer-events-none"
@@ -31,24 +31,22 @@ export const GameSummaryScreen: React.FC<GameSummaryScreenProps> = ({
       </svg>
 
       {/* Flat Cartoon Summary Card */}
-      <div className="relative z-10 w-full max-w-lg bg-[#FFFDF0] border-6 border-black rounded-3xl p-6 text-center flex flex-col items-center">
-        <h1 className="text-3xl sm:text-4xl font-black text-black mb-4">
-          סיום המשחק! 🏁
+      <div className="relative z-10 w-full max-w-sm bg-[#FFFDF0] border-6 border-black rounded-3xl p-5 text-center flex flex-col items-center">
+        <h1 className="text-2xl sm:text-3xl font-black text-black mb-3">
+          סיום המשחק 🏁
         </h1>
 
-        <div className="w-full grid grid-cols-2 gap-4 mb-5">
-          {/* Time Box */}
-          <div className="bg-white border-4 border-black rounded-2xl p-3 flex flex-col items-center">
-            <span className="text-xs sm:text-sm font-black text-black mb-1">זמן</span>
-            <span className="font-mono text-2xl sm:text-3xl font-black text-black">
+        <div className="w-full grid grid-cols-2 gap-3 mb-4">
+          <div className="bg-white border-4 border-black rounded-xl p-2.5 flex flex-col items-center">
+            <span className="text-xs font-black text-black">זמן</span>
+            <span className="font-mono text-2xl font-black text-black">
               {formatFinalTime(session.elapsedSeconds)}
             </span>
           </div>
 
-          {/* Score Box */}
-          <div className="bg-white border-4 border-black rounded-2xl p-3 flex flex-col items-center">
-            <span className="text-xs sm:text-sm font-black text-black mb-1">ניקוד</span>
-            <span className="font-mono text-2xl sm:text-3xl font-black text-[#FF6B35]">
+          <div className="bg-white border-4 border-black rounded-xl p-2.5 flex flex-col items-center">
+            <span className="text-xs font-black text-black">ניקוד</span>
+            <span className="font-mono text-2xl font-black text-[#FF6B35]">
               {session.totalScore}
             </span>
           </div>
@@ -56,7 +54,7 @@ export const GameSummaryScreen: React.FC<GameSummaryScreenProps> = ({
 
         <button
           onClick={onRestart}
-          className="bg-[#FFD166] hover:bg-[#F4A261] active:translate-y-1 text-black font-black text-lg py-2.5 px-6 rounded-xl border-4 border-black cursor-pointer transition-transform select-none"
+          className="bg-[#FFD166] hover:bg-[#F4A261] active:translate-y-1 text-black font-black text-base py-2 px-6 rounded-xl border-4 border-black cursor-pointer select-none"
         >
           משחק חדש 🔄
         </button>

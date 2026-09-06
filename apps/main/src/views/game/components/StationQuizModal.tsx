@@ -25,56 +25,53 @@ export const StationQuizModal: React.FC<StationQuizModalProps> = ({
     if (currentQIndex < 2) {
       setCurrentQIndex((prev) => prev + 1);
     } else {
-      // Completed 3 questions! Show checkmark animation
       setShowCheckmark(true);
       setTimeout(() => {
         onComplete(station.id, 300, nextAnswers);
-      }, 1600);
+      }, 1500);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 select-none">
-      {/* Flat Cartoon Modal Box */}
-      <div className="relative w-full max-w-xl bg-[#FFFDF0] border-6 border-black rounded-3xl p-5 overflow-hidden flex flex-col justify-between max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-2 select-none touch-none">
+      <div className="relative w-full max-w-lg bg-[#FFFDF0] border-6 border-black rounded-3xl p-4 overflow-hidden flex flex-col justify-between max-h-[96vh]">
         
         {/* CHECKMARK ANIMATION (כשעונים על 3 שאלות) */}
         {showCheckmark ? (
-          <div className="py-12 flex flex-col items-center justify-center text-center">
-            {/* Big Flat Animated Checkmark V */}
-            <div className="w-32 h-32 rounded-full bg-[#4CAF50] border-6 border-black flex items-center justify-center mb-4 animate-bounce">
-              <Check className="w-20 h-20 text-black stroke-[4]" />
+          <div className="py-10 flex flex-col items-center justify-center text-center">
+            <div className="w-28 h-28 rounded-full bg-[#4CAF50] border-6 border-black flex items-center justify-center mb-3 animate-bounce">
+              <Check className="w-18 h-18 text-black stroke-[4]" />
             </div>
             <h2 className="text-3xl font-black text-black">
-              התחנה הושלמה!
+              מעולה!
             </h2>
           </div>
         ) : (
           <>
-            {/* Header: Station Name & Question Step */}
-            <div className="flex items-center justify-between border-b-4 border-black pb-2 mb-3">
-              <span className="text-base sm:text-lg font-black text-black truncate">
+            {/* Header: Question Number */}
+            <div className="flex items-center justify-between border-b-4 border-black pb-1.5 mb-2">
+              <span className="text-sm font-black text-black">
                 {station.name}
               </span>
-              <span className="bg-[#FFD166] text-black border-2 border-black px-3 py-0.5 rounded-xl text-xs sm:text-sm font-black shrink-0">
-                שאלה {currentQIndex + 1} מתוך 3
+              <span className="bg-[#FFD166] text-black border-2 border-black px-2.5 py-0.5 rounded-lg text-xs font-black">
+                {currentQIndex + 1}/3
               </span>
             </div>
 
             {/* Question Text */}
-            <div className="bg-white border-4 border-black rounded-2xl p-3 mb-3 text-center">
+            <div className="bg-white border-4 border-black rounded-xl p-2.5 mb-2.5 text-center">
               <p className="text-base sm:text-lg font-black text-black leading-snug">
                 {currentQuestion.text}
               </p>
             </div>
 
-            {/* 4 Options Grid (Flat Buttons) */}
-            <div className="grid grid-cols-2 gap-2.5">
+            {/* 4 Options (2x2 Flat Grid, Zero Scroll) */}
+            <div className="grid grid-cols-2 gap-2">
               {currentQuestion.options.map((opt, idx) => (
                 <button
                   key={idx}
                   onClick={() => handleSelectOption(idx)}
-                  className="bg-white hover:bg-[#FFD166] active:translate-y-1 text-black font-black text-sm sm:text-base p-3 rounded-2xl border-4 border-black cursor-pointer transition-transform text-right"
+                  className="bg-white hover:bg-[#FFD166] active:translate-y-1 text-black font-black text-sm p-2.5 rounded-xl border-4 border-black cursor-pointer text-right transition-transform"
                 >
                   {opt}
                 </button>
