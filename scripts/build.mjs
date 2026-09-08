@@ -47,14 +47,34 @@ if (!fs.existsSync(mainDistDir)) {
 }
 copyDirRecursive(mainDistDir, publicDir);
 
-console.log('📝 [4/5] Copying apps/forms/mashabim to public/forms/mashabim/...');
-const formsSrc = path.join(rootDir, 'apps', 'forms', 'mashabim');
-const formsDest = path.join(publicDir, 'forms', 'mashabim');
-copyDirRecursive(formsSrc, formsDest);
+console.log('📝 Copying sub-apps to public/...');
+const appsDir = path.join(rootDir, 'apps');
+const appEntries = fs.readdirSync(appsDir, { withFileTypes: true });
 
-console.log('📊 [5/5] Copying apps/manage/mashabim to public/manage/mashabim/...');
-const manageSrc = path.join(rootDir, 'apps', 'manage', 'mashabim');
-const manageDest = path.join(publicDir, 'manage', 'mashabim');
-copyDirRecursive(manageSrc, manageDest);
+for (const entry of appEntries) {
+  if (entry.name === 'main' || entry.name.startsWith('.')) continue;
+
+  const appPath = path.join(appsDir, entry.name);
+  if (entry.isDirectory()) {
+    // If it's a category folder like forms/ or manage/, copy its subdirectories
+    if (entry.name === 'forms' || entry.name === 'manage') {
+      const subEntries = fs.readdirSync(appPath, { withFileTypes: true });
+      for (const sub of subEntries) {
+        if (sub.isDirectory()) {
+          const src = path.join(appPath, sub.name);
+          const dest = path.join(publicDir, entry.name, sub.name);
+          console.log(`  -> Copying ${entry.name}/${sub.name} to public/${entry.name}/${sub.name}`);
+          copyDirRecursive(src, dest);
+        }
+      }
+    } else {
+      // Standalone app/page directly under apps/ (e.g. apps/mashabim)
+      const dest = path.join(publicDir, entry.name);
+      console.log(`  -> Copying ${entry.name} to public/${entry.name}`);
+      copyDirRecursive(appPath, dest);
+    }
+  }
+}
 
 console.log('✨ Build & aggregation completed successfully! Ready for Firebase Hosting.');
+
