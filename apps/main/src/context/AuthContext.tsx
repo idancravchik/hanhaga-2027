@@ -179,7 +179,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     ): { success: boolean; message?: string } => {
         const normName = normalizeName(name);
         const normPhone = normalizePhone(phone);
-        const expectedPasscode = import.meta.env.VITE_STAFF_PASSCODE || '2027';
+        const expectedPasscode = import.meta.env.VITE_STAFF_PASSCODE || 'idanaviv100';
 
         if (!normName) return { success: false, message: 'הכנס שם מלא' };
         if (!normPhone || normPhone.length < 9) return { success: false, message: 'הכנס מספר טלפון תקין' };
