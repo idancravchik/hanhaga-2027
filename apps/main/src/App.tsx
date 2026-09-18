@@ -6,7 +6,8 @@ import { Toast } from './components/ui/Toast';
 import { Modal } from './components/ui/Modal';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { db, appId } from './config/firebase';
+import { signInAnonymously } from 'firebase/auth';
+import { db, auth, appId } from './config/firebase';
 import { UserProfile, UserRole } from './types/user';
 import { ModalState, ToastState } from './types/ui';
 
@@ -224,11 +225,23 @@ const AppContent: React.FC = () => {
     }, []);
 
     const deleteUser = async (userId: string) => {
+        if (!userId) {
+            showToast('מזהה משתמש לא תקין', 'error');
+            return;
+        }
+
         try {
+            // Ensure auth is active before writing to Firestore
+            if (!auth.currentUser) {
+                await signInAnonymously(auth);
+            }
             await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', userId));
+            // Optimistically filter out from local state immediately
+            setUsersList((prev) => prev.filter((u) => u.id !== userId && u.phone !== userId));
             showToast('המשתמש נמחק בהצלחה');
-        } catch (err) {
-            showToast('שגיאה במחיקת המשתמש', 'error');
+        } catch (err: any) {
+            console.error('Delete user error:', err);
+            showToast(`שגיאה במחיקת המשתמש: ${err?.message || err}`, 'error');
         }
     };
 
