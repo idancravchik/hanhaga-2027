@@ -19,13 +19,29 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'hanhaga_profile';
+const SESSION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
     const [profile, setProfile] = useState<UserProfile | null>(() => {
         try {
-            const saved = localStorage.getItem(STORAGE_KEY);
-            return saved ? JSON.parse(saved) : null;
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object') {
+                if (parsed.expiresAt) {
+                    if (Date.now() > parsed.expiresAt) {
+                        localStorage.removeItem(STORAGE_KEY);
+                        return null;
+                    }
+                    return parsed.profile || null;
+                }
+                // Legacy session migration: attach 24h expiration
+                const expiresAt = Date.now() + SESSION_DURATION_MS;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({ profile: parsed, expiresAt }));
+                return parsed;
+            }
+            return null;
         } catch {
             return null;
         }
@@ -53,7 +69,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const setSessionProfile = (p: UserProfile | null) => {
         setProfile(p);
         if (p) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
+            const expiresAt = Date.now() + SESSION_DURATION_MS;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({ profile: p, expiresAt }));
         } else {
             localStorage.removeItem(STORAGE_KEY);
         }

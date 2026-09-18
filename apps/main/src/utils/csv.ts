@@ -55,6 +55,16 @@ export const parseUsersCSV = (fileText: string): CSVImportResult => {
     return { users, errors, count };
 };
 
+const sanitizeCSVField = (val: any): string => {
+    if (val === null || val === undefined) return '""';
+    let str = String(val).replace(/"/g, '""');
+    // Prevent CSV/Excel formula injection
+    if (/^[=+\-@]/.test(str)) {
+        str = `'${str}`;
+    }
+    return `"${str}"`;
+};
+
 export const exportUsersToCSV = (
     students: UserProfile[],
     attendance: Record<string, any>,
@@ -77,10 +87,10 @@ export const exportUsersToCSV = (
         const studentId = student.id || student.phone || '';
         const att = attendance[studentId] || {};
         const row = [
-            `"${studentId}"`,
-            `"${student.name || student.fullName || ''}"`,
-            `"${student.school || ''}"`,
-            `"${student.group || 0}"`,
+            sanitizeCSVField(studentId),
+            sanitizeCSVField(student.name || student.fullName || ''),
+            sanitizeCSVField(student.school || ''),
+            sanitizeCSVField(student.group || 0),
             ...validEvents.map((ev) => (att[ev.id] ? '"נכח"' : '"נעדר"')),
         ];
 
@@ -88,7 +98,7 @@ export const exportUsersToCSV = (
             const g = grades[`${studentId}_${exam.id}`];
             if (g) {
                 const total = Object.values(g.scores || {}).reduce((a: any, b: any) => (parseInt(a) || 0) + (parseInt(b) || 0), 0);
-                row.push(`"${total}"`);
+                row.push(sanitizeCSVField(total));
             } else {
                 row.push('"חסר ציון"');
             }

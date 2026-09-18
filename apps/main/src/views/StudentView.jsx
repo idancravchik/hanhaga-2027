@@ -109,7 +109,7 @@ export default function StudentView({ profile, exams, grades, attendance, events
                             )}
                         </div>
                     </div>
-                    <button onClick={() => setView('login')} title="התנתקות" className="bg-[#f1f3f4] hover:bg-[#e8eaed] p-2.5 rounded-full text-[#3c4043] transition-all"><UserCircle size={22} /></button>
+                    <button onClick={() => setView('login')} title="התנתקות" aria-label="התנתקות מהמערכת" className="bg-[#f1f3f4] hover:bg-[#e8eaed] p-2.5 rounded-full text-[#3c4043] transition-all"><UserCircle size={22} aria-hidden="true" /></button>
                 </div>
             </header>
 

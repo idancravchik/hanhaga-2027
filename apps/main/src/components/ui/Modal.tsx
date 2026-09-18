@@ -7,13 +7,25 @@ interface ModalProps {
     setModal: (modal: ModalState) => void;
 }
 
-export const Modal: React.FC<ModalProps> = ({ modal, setModal }) => (
-    <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="modal-title"
-        className={`fixed inset-0 z-[110] flex items-center justify-center p-4 transition-all duration-200 ${modal.show ? 'visible opacity-100' : 'invisible opacity-0'}`}
-    >
+export const Modal: React.FC<ModalProps> = ({ modal, setModal }) => {
+    React.useEffect(() => {
+        if (!modal.show) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && !modal.isConfirm) {
+                setModal({ ...modal, show: false });
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [modal, setModal]);
+
+    return (
+        <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-title"
+            className={`fixed inset-0 z-[110] flex items-center justify-center p-4 transition-all duration-200 ${modal.show ? 'visible opacity-100' : 'invisible opacity-0'}`}
+        >
         <div className="absolute inset-0 bg-[#202124]/50" onClick={() => !modal.isConfirm && setModal({ ...modal, show: false })}></div>
         <div className="bg-white rounded-[24px] border border-[#dadce0] w-full max-w-[440px] relative z-10 p-5 sm:p-6 text-right shadow-none max-h-[90vh] overflow-y-auto" dir="rtl">
             <div className="flex items-center gap-3 mb-4">
@@ -43,4 +55,5 @@ export const Modal: React.FC<ModalProps> = ({ modal, setModal }) => (
             </div>
         </div>
     </div>
-);
+    );
+};
