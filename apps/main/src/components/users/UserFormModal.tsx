@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, UserPlus, Edit2, AlertCircle } from 'lucide-react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { X, UserPlus, Edit2, AlertCircle, Search, Check, ChevronUp, ChevronDown } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db, appId } from '@/config/firebase';
 import { UserProfile, UserRole } from '@/types/user';
@@ -18,9 +18,38 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ userToEdit, onClos
 
     const [name, setName] = useState(userToEdit?.name || userToEdit?.fullName || '');
     const [phone, setPhone] = useState(userToEdit?.phone || userToEdit?.id || '');
-    const [school, setSchool] = useState(userToEdit?.school || SCHOOL_LIST[0]);
+    const [school, setSchool] = useState(userToEdit?.school || '');
+    const [schoolQuery, setSchoolQuery] = useState(userToEdit?.school || '');
+    const [isSchoolOpen, setIsSchoolOpen] = useState(false);
+    const schoolContainerRef = useRef<HTMLDivElement>(null);
     const [group, setGroup] = useState<number | string>(userToEdit?.group !== undefined ? userToEdit.group : 1);
     const [role, setRole] = useState<UserRole>(userToEdit?.role || 'student');
+
+    // Close dropup when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (schoolContainerRef.current && !schoolContainerRef.current.contains(e.target as Node)) {
+                setIsSchoolOpen(false);
+                if (school && !schoolQuery.trim()) {
+                    setSchoolQuery(school);
+                }
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [school, schoolQuery]);
+
+    const filteredSchools = useMemo(() => {
+        const q = schoolQuery.trim().toLowerCase();
+        if (!q) return SCHOOL_LIST;
+        return SCHOOL_LIST.filter((s) => s.toLowerCase().includes(q));
+    }, [schoolQuery]);
+
+    const handleSelectSchool = (selected: string) => {
+        setSchool(selected);
+        setSchoolQuery(selected);
+        setIsSchoolOpen(false);
+    };
 
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(false);
@@ -28,10 +57,11 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ userToEdit, onClos
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
+        const finalSchool = (school || schoolQuery || '').trim();
         const formData: Partial<UserProfile> = {
             name,
             phone,
-            school,
+            school: finalSchool || 'לא שויך',
             group: Number(group) || 0,
             role,
         };
@@ -54,7 +84,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ userToEdit, onClos
             firestoreId: userId,
             name: name.trim(),
             fullName: name.trim(),
-            school,
+            school: finalSchool || 'לא שויך',
             group: Number(group) || 0,
             role,
             tags: userToEdit?.tags || [],
@@ -126,20 +156,67 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ userToEdit, onClos
                         {errors.phone && <span className="text-[11px] font-normal text-[#d93025] flex items-center gap-1"><AlertCircle size={12} /> {errors.phone}</span>}
                     </div>
 
-                    {/* School */}
-                    <div className="space-y-1">
+                    {/* School Search with Options Popping Upwards */}
+                    <div className="space-y-1 relative" ref={schoolContainerRef}>
                         <label className="text-[13px] font-medium text-[#3c4043] block">בית ספר</label>
-                        <select
-                            value={school}
-                            onChange={(e) => setSchool(e.target.value)}
-                            className="w-full h-10 px-3 border border-[#dadce0] rounded font-normal bg-white text-[#202124] text-[13px] outline-none focus:border-[#1a73e8]"
-                        >
-                            {SCHOOL_LIST.map((s, idx) => (
-                                <option key={idx} value={s}>
-                                    {s}
-                                </option>
-                            ))}
-                        </select>
+                        <div className="relative">
+                            <input
+                                type="text"
+                                value={schoolQuery}
+                                onChange={(e) => {
+                                    setSchoolQuery(e.target.value);
+                                    setSchool(e.target.value);
+                                    setIsSchoolOpen(true);
+                                }}
+                                onFocus={() => setIsSchoolOpen(true)}
+                                placeholder="חפש ובחר בית ספר..."
+                                className="w-full h-10 pr-9 pl-9 border border-[#dadce0] rounded font-normal bg-white text-[#202124] text-[13px] outline-none focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8] transition-all"
+                            />
+                            <Search className="absolute right-2.5 top-2.5 text-[#5f6368] pointer-events-none" size={16} />
+                            <button
+                                type="button"
+                                onClick={() => setIsSchoolOpen(!isSchoolOpen)}
+                                className="absolute left-2.5 top-2.5 text-[#5f6368] hover:text-[#202124] transition-colors"
+                                aria-label={isSchoolOpen ? "סגור רשימת בתי ספר" : "פתח רשימת בתי ספר"}
+                            >
+                                {isSchoolOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                            </button>
+
+                            {/* Options Popping Upwards */}
+                            {isSchoolOpen && (
+                                <div
+                                    role="listbox"
+                                    className="absolute bottom-full mb-1 left-0 right-0 z-50 bg-white border border-[#dadce0] rounded-xl shadow-xl max-h-56 overflow-y-auto p-1.5 transition-all text-right"
+                                >
+                                    {filteredSchools.length === 0 ? (
+                                        <div className="p-3 text-center text-[12px] text-[#5f6368] italic">
+                                            לא נמצאו בתי ספר תואמים לחיפוש
+                                        </div>
+                                    ) : (
+                                        filteredSchools.map((s, idx) => {
+                                            const isSelected = s === school;
+                                            return (
+                                                <button
+                                                    key={idx}
+                                                    type="button"
+                                                    role="option"
+                                                    aria-selected={isSelected}
+                                                    onClick={() => handleSelectSchool(s)}
+                                                    className={`w-full text-right px-3 py-2 text-[13px] rounded-lg flex items-center justify-between transition-colors ${
+                                                        isSelected
+                                                            ? 'bg-[#e8f0fe] text-[#1a73e8] font-medium'
+                                                            : 'text-[#202124] hover:bg-[#f1f3f4] font-normal'
+                                                    }`}
+                                                >
+                                                    <span className="truncate">{s}</span>
+                                                    {isSelected && <Check size={14} className="text-[#1a73e8] shrink-0 mr-2" />}
+                                                </button>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     {/* Group */}
