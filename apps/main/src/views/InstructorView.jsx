@@ -74,11 +74,34 @@ export default function InstructorView({ profile, usersList, exams, grades, atte
     }, [eventsList]);
 
     const handleUpdateGrade = async () => {
-        const payload = { studentId: selectedStudent.id, examId: selectedExam.id, scores, comment, updatedAt: new Date().toISOString() };
-        const key = `${selectedStudent.id}_${selectedExam.id}`;
-        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'grades', key), payload);
-        showToast("עודכן בענן!");
-        setSelectedStudent(null);
+        if (!selectedStudent || !selectedExam) return;
+        const studentId = selectedStudent.id || selectedStudent.phone || selectedStudent.firestoreId;
+        const cleanedScores = {};
+        (selectedExam.categories || []).forEach((cat) => {
+            const raw = scores[cat.name];
+            const maxVal = Number(cat.maxScore ?? cat.max ?? 100);
+            const parsed = typeof raw === 'number' ? raw : parseInt(raw, 10);
+            cleanedScores[cat.name] = isNaN(parsed) ? 0 : Math.min(Math.max(0, parsed), maxVal);
+        });
+
+        const payload = {
+            id: `${studentId}_${selectedExam.id}`,
+            studentId,
+            examId: selectedExam.id,
+            scores: cleanedScores,
+            comment: comment || '',
+            verbalComment: comment || '',
+            updatedAt: new Date().toISOString()
+        };
+        const key = `${studentId}_${selectedExam.id}`;
+        try {
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'grades', key), payload, { merge: true });
+            showToast("עודכן בענן!");
+            setSelectedStudent(null);
+        } catch (err) {
+            console.error("Error updating grade:", err);
+            showToast("שגיאה בשמירת הציון בענן", "error");
+        }
     };
 
 
@@ -127,15 +150,36 @@ export default function InstructorView({ profile, usersList, exams, grades, atte
                         <>
                             <p className="text-[#5f6368] text-[12px] mb-4 font-medium uppercase tracking-wider">{selectedExam.title}</p>
                             <div className="space-y-4">
-                                {selectedExam.categories.map((cat, i) => (
-                                    <div key={i}>
-                                        <div className="flex justify-between mb-1.5 leading-none">
-                                             <label className="font-medium text-[#202124] text-[14px]">{cat.name}</label>
-                                             <span className="text-[#5f6368] text-[12px] font-normal">מקס' {cat.max}</span>
+                                {selectedExam.categories.map((cat, i) => {
+                                    const maxVal = Number(cat.maxScore ?? cat.max ?? 100);
+                                    return (
+                                        <div key={i}>
+                                            <div className="flex justify-between mb-1.5 leading-none">
+                                                 <label className="font-medium text-[#202124] text-[14px]">{cat.name}</label>
+                                                 <span className="text-[#5f6368] text-[12px] font-normal">מקס' {maxVal}</span>
+                                            </div>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                max={maxVal}
+                                                className="w-full h-11 px-3 border border-[#dadce0] rounded text-[16px] bg-white font-medium focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8] outline-none transition-all tabular-nums text-center text-[#202124]"
+                                                value={scores[cat.name] !== undefined ? scores[cat.name] : ''}
+                                                onChange={(e) => {
+                                                    const rawVal = e.target.value;
+                                                    if (rawVal === '') {
+                                                        const updated = { ...scores };
+                                                        delete updated[cat.name];
+                                                        setScores(updated);
+                                                    } else {
+                                                        const parsed = parseInt(rawVal, 10);
+                                                        const num = isNaN(parsed) ? 0 : Math.min(Math.max(0, parsed), maxVal);
+                                                        setScores({ ...scores, [cat.name]: num });
+                                                    }
+                                                }}
+                                            />
                                         </div>
-                                        <input type="number" className="w-full h-11 px-3 border border-[#dadce0] rounded text-[16px] bg-white font-medium focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8] outline-none transition-all tabular-nums text-center text-[#202124]" max={cat.max} value={scores[cat.name] || ''} onChange={(e) => setScores({ ...scores, [cat.name]: Math.min(parseInt(e.target.value) || 0, cat.max) })} />
-                                    </div>
-                                ))}
+                                    );
+                                })}
                                 <div className="space-y-1.5">
                                     <label className="block font-medium text-[#3c4043] text-[14px] mr-1">הערכה מילולית</label>
                                     <textarea className="w-full p-3 border border-[#dadce0] rounded bg-white h-28 focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8] outline-none transition-all font-normal text-[#202124] text-right text-[14px]" placeholder="דגשים ושיפורים..." value={comment} onChange={(e) => setComment(e.target.value)} />

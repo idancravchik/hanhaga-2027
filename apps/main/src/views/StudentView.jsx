@@ -64,7 +64,7 @@ export default function StudentView({ profile, exams, grades, attendance, events
                                                 <div className="font-medium tabular-nums text-[14px]">
                                                     <span className="text-[#1a73e8] text-xl font-medium">{g.scores[cat.name] || 0}</span>
                                                     <span className="text-[#5f6368] text-sm mx-1">/</span>
-                                                    <span className="text-[#5f6368]">{cat.max}</span>
+                                                    <span className="text-[#5f6368]">{cat.maxScore ?? cat.max ?? 100}</span>
                                                 </div>
                                             </div>
                                         ))}

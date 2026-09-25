@@ -248,7 +248,7 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
                                                 {exam.categories.map((cat, i) => (
                                                     <div key={i} className="bg-[#f8f9fa] p-3 rounded-lg border border-[#dadce0] flex justify-between items-center">
                                                         <span className="font-normal text-[#5f6368] text-[12px]">{cat.name}</span>
-                                                        <span className="font-medium text-[#202124] text-[13px] tabular-nums">{g.scores[cat.name] || 0} / {cat.max}</span>
+                                                        <span className="font-medium text-[#202124] text-[13px] tabular-nums">{g.scores[cat.name] || 0} / {cat.maxScore ?? cat.max ?? 100}</span>
                                                     </div>
                                                 ))}
                                             </div>
