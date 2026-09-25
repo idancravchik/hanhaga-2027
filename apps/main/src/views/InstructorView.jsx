@@ -2,7 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { ChevronLeft, Search, Calendar, UserCircle, BookOpen, AlertCircle, Check, X, ChevronDown, ChevronUp, Eye } from 'lucide-react';
 import { LOGO_URL, getUserAvatar, TAGS_CATALOG, getTagColorClasses } from '../config/constants';
 import { doc, setDoc } from 'firebase/firestore';
-import { db, appId } from '../config/firebase';
+import { signInAnonymously } from 'firebase/auth';
+import { db, auth, appId } from '../config/firebase';
 import { StudentProfileModal } from '../components/users/StudentProfileModal';
 import { AttendanceReportTable } from '../components/events/AttendanceReportTable';
 
@@ -95,6 +96,9 @@ export default function InstructorView({ profile, usersList, exams, grades, atte
         };
         const key = `${studentId}_${selectedExam.id}`;
         try {
+            if (!auth.currentUser) {
+                await signInAnonymously(auth);
+            }
             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'grades', key), payload, { merge: true });
             showToast("עודכן בענן!");
             setSelectedStudent(null);
@@ -108,8 +112,17 @@ export default function InstructorView({ profile, usersList, exams, grades, atte
 
     const handleSaveNote = async () => {
         const payload = { studentId: selectedStudent.id, content: comment, updatedAt: new Date().toISOString() };
-        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notes', selectedStudent.id), payload, { merge: true });
-        setSelectedStudent(null);
+        try {
+            if (!auth.currentUser) {
+                await signInAnonymously(auth);
+            }
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notes', selectedStudent.id), payload, { merge: true });
+            showToast("נשמר בתיק האישי!");
+            setSelectedStudent(null);
+        } catch (err) {
+            console.error("Error saving note:", err);
+            showToast("שגיאה בשמירת ההערה", "error");
+        }
     };
 
     // Grade Entry or Notes Edit Modal/Form

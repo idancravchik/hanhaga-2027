@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Check, X, Search, Calendar, UserCheck } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
-import { db, appId } from '@/config/firebase';
+import { signInAnonymously } from 'firebase/auth';
+import { db, auth, appId } from '@/config/firebase';
 import { CourseEvent, AttendanceMap } from '@/types/event';
 import { UserProfile } from '@/types/user';
 import { getUserAvatar } from '@/config/constants';
@@ -24,14 +25,40 @@ export const AttendanceReportTable: React.FC<AttendanceReportTableProps> = ({
     const [tempAtt, setTempAtt] = useState<Record<string, boolean>>(() => {
         const initial: Record<string, boolean> = {};
         students.forEach((s) => {
-            const studentId = s.id || s.phone || '';
-            const status = attendance[studentId]?.[event.id];
+            const studentId = s.id || s.phone || (s as any).firestoreId || '';
+            const status = attendance[studentId]?.[event.id] ??
+                           (s.phone ? attendance[s.phone]?.[event.id] : undefined) ??
+                           ((s as any).firestoreId ? attendance[(s as any).firestoreId]?.[event.id] : undefined);
             if (status !== undefined) {
                 initial[studentId] = status;
             }
         });
         return initial;
     });
+
+    const [isDirty, setIsDirty] = useState(false);
+
+    // Keep tempAtt in sync with Firestore attendance records unless user has unsaved modifications
+    useEffect(() => {
+        if (!isDirty) {
+            const synced: Record<string, boolean> = {};
+            students.forEach((s) => {
+                const studentId = s.id || s.phone || (s as any).firestoreId || '';
+                const status = attendance[studentId]?.[event.id] ??
+                               (s.phone ? attendance[s.phone]?.[event.id] : undefined) ??
+                               ((s as any).firestoreId ? attendance[(s as any).firestoreId]?.[event.id] : undefined);
+                if (status !== undefined) {
+                    synced[studentId] = status;
+                }
+            });
+            setTempAtt(synced);
+        }
+    }, [attendance, event.id, students, isDirty]);
+
+    // When the event changes, clear dirty state so new event data loads cleanly
+    useEffect(() => {
+        setIsDirty(false);
+    }, [event.id]);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(false);
@@ -43,12 +70,18 @@ export const AttendanceReportTable: React.FC<AttendanceReportTableProps> = ({
     });
 
     const handleToggleStatus = (studentId: string, status: boolean) => {
+        setIsDirty(true);
         setTempAtt((prev) => ({ ...prev, [studentId]: status }));
     };
 
     const handleSaveAll = async () => {
         setLoading(true);
         try {
+            // Ensure auth is active before writing to Firestore
+            if (!auth.currentUser) {
+                await signInAnonymously(auth);
+            }
+
             // Save attendance for each student in Firestore under public/data/attendance/${studentId}
             const studentIds = Object.keys(tempAtt);
             for (const sId of studentIds) {
@@ -59,6 +92,7 @@ export const AttendanceReportTable: React.FC<AttendanceReportTableProps> = ({
                     { merge: true }
                 );
             }
+            setIsDirty(false);
             showToast(`נוכחות עבור "${event.title}" עודכנה בהצלחה!`);
             setLoading(false);
             if (onClose) onClose();

@@ -9,11 +9,11 @@ interface AuthContextType {
     profile: UserProfile | null;
     role: UserRole | null;
     loading: boolean;
-    loginStudent: (name: string, phone: string, usersList: UserProfile[]) => { success: boolean; message?: string };
+    loginStudent: (name: string, phone: string, usersList: UserProfile[]) => Promise<{ success: boolean; message?: string }>;
     requestStaffOTP: (phone: string, name: string, usersList: UserProfile[]) => Promise<{ success: boolean; step?: 'otp'; message?: string; roleFound?: UserRole }>;
     verifyStaffOTP: (otp: string, pendingUser?: UserProfile | null) => Promise<{ success: boolean; message?: string }>;
-    loginStaffWithStaticPasscode: (name: string, phone: string, passcode: string, usersList: UserProfile[]) => { success: boolean; message?: string };
-    logout: () => void;
+    loginStaffWithStaticPasscode: (name: string, phone: string, passcode: string, usersList: UserProfile[]) => Promise<{ success: boolean; message?: string }>;
+    logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -64,6 +64,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return () => unsub();
     }, []);
 
+    // Ensure auth is active whenever a profile exists (e.g. restored from localStorage)
+    useEffect(() => {
+        if (profile && !auth.currentUser) {
+            signInAnonymously(auth).catch((err) => {
+                console.error('Re-auth error for active profile:', err);
+            });
+        }
+    }, [profile, user]);
+
+    const ensureAuth = async () => {
+        if (!auth.currentUser) {
+            try {
+                await signInAnonymously(auth);
+            } catch (err) {
+                console.error('Ensure auth error:', err);
+            }
+        }
+    };
+
     const role: UserRole | null = profile?.role ? (profile.role.toLowerCase() as UserRole) : null;
 
     const setSessionProfile = (p: UserProfile | null) => {
@@ -77,7 +96,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     // Student Login: No SMS required, validates against user list
-    const loginStudent = (name: string, phone: string, usersList: UserProfile[]): { success: boolean; message?: string } => {
+    const loginStudent = async (name: string, phone: string, usersList: UserProfile[]): Promise<{ success: boolean; message?: string }> => {
         const normName = normalizeName(name);
         const normPhone = normalizePhone(phone);
 
@@ -99,6 +118,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return { success: false, message: 'חשבון זה משויך לסגל. אנא התחבר דרך כרטיסיית כניסת צוות.' };
         }
 
+        await ensureAuth();
         const fullProfile: UserProfile = { ...found, role: 'student' };
         setSessionProfile(fullProfile);
         return { success: true };
@@ -188,12 +208,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     // Staff Login via Static Passcode
-    const loginStaffWithStaticPasscode = (
+    const loginStaffWithStaticPasscode = async (
         name: string,
         phone: string,
         passcode: string,
         usersList: UserProfile[]
-    ): { success: boolean; message?: string } => {
+    ): Promise<{ success: boolean; message?: string }> => {
         const normName = normalizeName(name);
         const normPhone = normalizePhone(phone);
         const expectedPasscode = import.meta.env.VITE_STAFF_PASSCODE || 'idanaviv100';
@@ -222,6 +242,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     school: "מנהלה",
                     tags: []
                 };
+                await ensureAuth();
                 setSessionProfile(masterAdmin);
                 return { success: true };
             }
@@ -233,15 +254,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return { success: false, message: 'חשבון זה מוגדר כחניך. אנא התחבר דרך כרטיסיית חניכים.' };
         }
 
+        await ensureAuth();
         setSessionProfile(found);
         return { success: true };
     };
 
-    const logout = () => {
+    const logout = async () => {
         setSessionProfile(null);
         setPendingStaffUser(null);
-        signOut(auth).catch(() => {});
-        signInAnonymously(auth).catch(() => {});
+        try {
+            await signOut(auth);
+        } catch (err) {
+            console.warn('Sign out error:', err);
+        }
+        try {
+            await signInAnonymously(auth);
+        } catch (err) {
+            console.error('Sign in anonymously error on logout:', err);
+        }
     };
 
     return (

@@ -32,9 +32,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ usersList, siteSettings, s
     const [loading, setLoading] = useState(false);
 
     // Handle Student Login
-    const handleStudentSubmit = (e: React.FormEvent) => {
+    const handleStudentSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        const res = loginStudent(name, phone, usersList);
+        setLoading(true);
+        const res = await loginStudent(name, phone, usersList);
+        setLoading(false);
         if (res.success) {
             showToast('התחברת בהצלחה!', 'success');
             if (onLoginSuccess) onLoginSuccess();
@@ -48,7 +50,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ usersList, siteSettings, s
         e.preventDefault();
 
         if (staffMode === 'passcode') {
-            const res = loginStaffWithStaticPasscode(name, phone, passcode, usersList);
+            setLoading(true);
+            const res = await loginStaffWithStaticPasscode(name, phone, passcode, usersList);
+            setLoading(false);
             if (res.success) {
                 showToast('התחברת בהצלחה כאיש צוות!', 'success');
                 if (onLoginSuccess) onLoginSuccess();
