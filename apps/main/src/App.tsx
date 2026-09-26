@@ -4,6 +4,7 @@ import { Loader2 } from 'lucide-react';
 
 import { Toast } from './components/ui/Toast';
 import { Modal } from './components/ui/Modal';
+import { A2HSPrompt } from './components/A2HSPrompt';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { signInAnonymously } from 'firebase/auth';
@@ -261,6 +262,7 @@ const AppContent: React.FC = () => {
         <div className="min-h-screen bg-transparent font-sans text-[#202124]">
             <Toast toast={toast} />
             <Modal modal={modal} setModal={setModal} />
+            <A2HSPrompt />
 
             {!profile || view === 'login' ? (
                 <LoginView

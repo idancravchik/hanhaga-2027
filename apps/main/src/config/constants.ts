@@ -1,6 +1,6 @@
 import { TagCatalogItem, UserRole } from '../types/user';
 
-export const LOGO_URL = "/logo.png";
+export const LOGO_URL = "/icons/icon-192.png";
 export const BACKGROUND_IMAGE_URL = "/background.jpg";
 
 export const SCHOOL_LIST: readonly string[] = [

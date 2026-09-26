@@ -1,0 +1,38 @@
+{
+  "name": "קורס הנהגה תשפ\"ז",
+  "short_name": "הנהגה 2027",
+  "description": "פורטל קורס הנהגה תשפ\"ז",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8f9fa",
+  "theme_color": "#1a73e8",
+  "dir": "rtl",
+  "lang": "he",
+  "icons": [
+    {
+      "src": "/icons/icon-64.png",
+      "sizes": "64x64",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
