@@ -1,11 +1,13 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronLeft, UserCircle } from 'lucide-react';
+import { ChevronLeft, UserCircle, Calendar, GraduationCap, Layers } from 'lucide-react';
 import { LOGO_URL, getUserAvatar, TAGS_CATALOG, getTagColorClasses } from '../config/constants';
 import { StudentGradesView } from '../components/exams/StudentGradesView';
 import { StudentScheduleView } from '../components/events/StudentScheduleView';
+import { MobileBottomNav } from '../components/navigation/MobileBottomNav';
 
 export default function StudentView({ profile, exams, grades, attendance, eventsList, setView }) {
     const [selectedExam, setSelectedExamInternal] = useState(null);
+    const [mobileTab, setMobileTab] = useState('all');
 
     React.useEffect(() => {
         const handlePopState = (event) => {
@@ -83,7 +85,7 @@ export default function StudentView({ profile, exams, grades, attendance, events
     }
 
     return (
-        <div className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full font-sans pb-10 text-right text-[#202124]" dir="rtl">
+        <div className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full font-sans pb-24 sm:pb-10 text-right text-[#202124]" dir="rtl">
             <header className="bg-white p-4 sm:p-6 rounded-[24px] border border-[#dadce0] mb-4 sm:mb-6">
                 <div className="flex justify-between items-start">
                     <div className="flex items-center gap-3">
@@ -113,20 +115,33 @@ export default function StudentView({ profile, exams, grades, attendance, events
                 </div>
             </header>
 
-            <div className="mb-6">
-                <StudentScheduleView
-                    events={eventsList}
-                    attendance={attendance}
-                    studentId={profile?.id || profile?.phone || ''}
-                />
-            </div>
+            {(mobileTab === 'all' || mobileTab === 'schedule') && (
+                <div className="mb-6">
+                    <StudentScheduleView
+                        events={eventsList}
+                        attendance={attendance}
+                        studentId={profile?.id || profile?.phone || ''}
+                    />
+                </div>
+            )}
 
-            <StudentGradesView
-                exams={exams.filter(e => e.isStudentVisible)}
-                grades={grades}
-                studentId={profile?.id || profile?.phone || ''}
-                studentPhone={profile?.phone}
-                studentFirestoreId={profile?.firestoreId}
+            {(mobileTab === 'all' || mobileTab === 'grades') && (
+                <StudentGradesView
+                    exams={exams.filter(e => e.isStudentVisible)}
+                    grades={grades}
+                    studentId={profile?.id || profile?.phone || ''}
+                    studentPhone={profile?.phone}
+                    studentFirestoreId={profile?.firestoreId}
+                />
+            )}
+
+            <MobileBottomNav
+                ariaLabel="ניווט חניך למובייל"
+                items={[
+                    { id: 'all', label: 'הכל', icon: Layers, onClick: () => setMobileTab('all'), active: mobileTab === 'all' },
+                    { id: 'schedule', label: 'לוח זמנים', icon: Calendar, onClick: () => setMobileTab('schedule'), active: mobileTab === 'schedule' },
+                    { id: 'grades', label: 'ציונים', icon: GraduationCap, onClick: () => setMobileTab('grades'), active: mobileTab === 'grades' },
+                ]}
             />
         </div>
     );

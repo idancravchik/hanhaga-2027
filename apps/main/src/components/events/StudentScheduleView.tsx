@@ -117,9 +117,11 @@ export const StudentScheduleView: React.FC<StudentScheduleViewProps> = ({ events
                                 <div>
                                     {tracksAttendance ? (
                                         <div
-                                            className={`px-3 py-1 rounded-full text-[12px] font-medium border flex items-center gap-1 ${
+                                            className={`px-3 py-1 rounded-full text-[12px] font-medium border flex items-center gap-1.5 ${
                                                 status === true
                                                     ? 'bg-white text-[#188038] border-[#188038]/40'
+                                                    : status === 'missing' || status === 'חסר'
+                                                    ? 'bg-[#fef7e0] text-[#b06000] border-[#feefc3]'
                                                     : status === false
                                                     ? 'bg-white text-[#d93025] border-[#d93025]/40'
                                                     : 'bg-[#f8f9fa] text-[#5f6368] border-[#dadce0]'
@@ -129,6 +131,12 @@ export const StudentScheduleView: React.FC<StudentScheduleViewProps> = ({ events
                                                 <>
                                                     <span>נכח</span>
                                                     <Check size={14} />
+                                                </>
+                                            )}
+                                            {(status === 'missing' || status === 'חסר') && (
+                                                <>
+                                                    <div className="w-2 h-2 rounded-full bg-[#f9ab00]" />
+                                                    <span>חסר</span>
                                                 </>
                                             )}
                                             {status === false && (

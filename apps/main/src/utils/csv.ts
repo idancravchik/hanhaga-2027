@@ -112,7 +112,13 @@ export const exportUsersToCSV = (
             sanitizeCSVField(student.name || student.fullName || ''),
             sanitizeCSVField(student.school || ''),
             sanitizeCSVField(student.group || 0),
-            ...validEvents.map((ev) => (att[ev.id] ? '"נכח"' : '"נעדר"')),
+            ...validEvents.map((ev) => {
+                const s = att[ev.id];
+                if (s === true) return '"נכח"';
+                if (s === 'missing' || s === 'חסר') return '"חסר"';
+                if (s === false) return '"נעדר"';
+                return '"לא דווח"';
+            }),
         ];
 
         exams.forEach((exam) => {

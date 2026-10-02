@@ -93,7 +93,7 @@ export const A2HSPrompt: React.FC = () => {
                     />
                     <div>
                         <h4 className="font-bold text-gray-900 text-sm sm:text-base leading-tight">
-                            התקנת אפליקציית הנהגה 2027
+                            התקנת אפליקציית קורס הנהגה
                         </h4>
                         <p className="text-xs text-gray-500 mt-0.5">
                             גישה מהירה ונוחה ישירות ממסך הבית

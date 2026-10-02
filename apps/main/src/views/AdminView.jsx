@@ -15,6 +15,7 @@ import { ExamBuilderModal } from '../components/exams/ExamBuilderModal';
 import { GradeEntryModal } from '../components/exams/GradeEntryModal';
 import { EventBuilderModal } from '../components/events/EventBuilderModal';
 import { AttendanceReportTable } from '../components/events/AttendanceReportTable';
+import { MobileBottomNav } from '../components/navigation/MobileBottomNav';
 
 export default function AdminView({ profile, usersList, exams, grades, attendance, notes, eventsList = [], deleteUser, setView, showToast, showAlert, siteSettings }) {
     const [adminSubView, setAdminSubViewInternal] = useState('reports');
@@ -270,7 +271,7 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
     }
 
     return (
-        <div className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-4 sm:space-y-6 text-right text-[#202124] font-sans" dir="rtl">
+        <div className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-4 sm:space-y-6 pb-24 sm:pb-8 text-right text-[#202124] font-sans" dir="rtl">
             <header className="bg-white p-4 sm:p-6 rounded-[24px] border border-[#dadce0] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex items-center gap-3">
                     <img src={LOGO_URL} className="w-9 h-9 sm:w-10 sm:h-10 object-contain" alt="Logo" />
@@ -308,8 +309,8 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
                 </div>
             </header>
 
-            {/* Admin Subview Navigation Bar */}
-            <div className="flex w-full bg-white p-1 rounded-full border border-[#dadce0] gap-1 overflow-x-auto no-scrollbar shrink-0">
+            {/* Admin Subview Navigation Bar (Desktop / Tablet only) */}
+            <div className="hidden sm:flex w-full bg-white p-1 rounded-full border border-[#dadce0] gap-1 overflow-x-auto no-scrollbar shrink-0">
                 <button onClick={() => setAdminSubView('reports')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all ${adminSubView === 'reports' ? 'bg-[#1a73e8] text-white' : 'text-[#3c4043] hover:text-[#202124]'}`}>דוחות קורס</button>
                 <button onClick={() => setAdminSubView('analytics')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all ${adminSubView === 'analytics' ? 'bg-[#1a73e8] text-white' : 'text-[#3c4043] hover:text-[#202124]'}`}>אנליטיקה</button>
                 <button onClick={() => setAdminSubView('users')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all ${adminSubView === 'users' ? 'bg-[#1a73e8] text-white' : 'text-[#3c4043] hover:text-[#202124]'}`}>משתמשים</button>
@@ -664,11 +665,26 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
                                                     <td className="p-4 text-[#5f6368] text-[13px] font-normal">{student.school || 'לא שויך'}</td>
                                                     {attendanceEvents.map(ev => {
                                                         const status = att[ev.id];
+                                                        const isPresent = status === true;
+                                                        const isMissing = status === 'missing' || status === 'חסר';
+                                                        const isAbsent = status === false;
                                                         return (
                                                             <td key={ev.id} className="p-1 text-center">
-                                                                <div className={`mx-auto w-6 h-6 rounded-full flex items-center justify-center ${status === true ? 'bg-[#188038] text-white' : status === false ? 'bg-[#d93025] text-white' : 'bg-[#f8f9fa] text-[#5f6368]'}`}>
-                                                                    {status === true && <Check size={12} />}
-                                                                    {status === false && <X size={12} className="stroke-[2.5]" />}
+                                                                <div
+                                                                    className={`mx-auto w-6 h-6 rounded-full flex items-center justify-center ${
+                                                                        isPresent
+                                                                            ? 'bg-[#188038] text-white'
+                                                                            : isMissing
+                                                                            ? 'bg-[#f9ab00] text-white'
+                                                                            : isAbsent
+                                                                            ? 'bg-[#d93025] text-white'
+                                                                            : 'bg-[#f8f9fa] text-[#5f6368]'
+                                                                    }`}
+                                                                    title={isPresent ? 'נכח' : isMissing ? 'חסר' : isAbsent ? 'נעדר' : 'לא דווח'}
+                                                                >
+                                                                    {isPresent && <Check size={12} />}
+                                                                    {isMissing && <div className="w-2 h-2 rounded-full bg-white" />}
+                                                                    {isAbsent && <X size={12} className="stroke-[2.5]" />}
                                                                     {status === undefined && <span className="text-[10px]">-</span>}
                                                                 </div>
                                                             </td>
@@ -739,6 +755,17 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
                     showToast={showToast}
                 />
             )}
+
+            <MobileBottomNav
+                ariaLabel="ניווט מערכת ניהול למובייל"
+                items={[
+                    { id: 'reports', label: 'דוחות', icon: FileText, onClick: () => setAdminSubView('reports'), active: adminSubView === 'reports' },
+                    { id: 'analytics', label: 'ניתוח', icon: PieChart, onClick: () => setAdminSubView('analytics'), active: adminSubView === 'analytics' },
+                    { id: 'users', label: 'משתמשים', icon: Users, onClick: () => setAdminSubView('users'), active: adminSubView === 'users' },
+                    { id: 'exams', label: 'מבחנים', icon: GraduationCap, onClick: () => setAdminSubView('exams'), active: adminSubView === 'exams' },
+                    { id: 'events', label: 'אירועים', icon: Calendar, onClick: () => setAdminSubView('events'), active: adminSubView === 'events' },
+                ]}
+            />
         </div>
     );
 }

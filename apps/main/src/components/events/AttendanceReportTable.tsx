@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Check, X, Search, Calendar, UserCheck } from 'lucide-react';
+import { Check, X, Search, UserCheck } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { signInAnonymously } from 'firebase/auth';
 import { db, auth, appId } from '@/config/firebase';
-import { CourseEvent, AttendanceMap } from '@/types/event';
+import { CourseEvent, AttendanceMap, AttendanceStatus } from '@/types/event';
 import { UserProfile } from '@/types/user';
-import { getUserAvatar } from '@/config/constants';
 
 interface AttendanceReportTableProps {
     event: CourseEvent;
@@ -22,8 +21,8 @@ export const AttendanceReportTable: React.FC<AttendanceReportTableProps> = ({
     onClose,
     showToast,
 }) => {
-    const [tempAtt, setTempAtt] = useState<Record<string, boolean>>(() => {
-        const initial: Record<string, boolean> = {};
+    const [tempAtt, setTempAtt] = useState<Record<string, AttendanceStatus | undefined>>(() => {
+        const initial: Record<string, AttendanceStatus | undefined> = {};
         students.forEach((s) => {
             const studentId = s.id || s.phone || (s as any).firestoreId || '';
             const status = attendance[studentId]?.[event.id] ??
@@ -37,11 +36,13 @@ export const AttendanceReportTable: React.FC<AttendanceReportTableProps> = ({
     });
 
     const [isDirty, setIsDirty] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [loading, setLoading] = useState(false);
 
     // Keep tempAtt in sync with Firestore attendance records unless user has unsaved modifications
     useEffect(() => {
         if (!isDirty) {
-            const synced: Record<string, boolean> = {};
+            const synced: Record<string, AttendanceStatus | undefined> = {};
             students.forEach((s) => {
                 const studentId = s.id || s.phone || (s as any).firestoreId || '';
                 const status = attendance[studentId]?.[event.id] ??
@@ -60,16 +61,13 @@ export const AttendanceReportTable: React.FC<AttendanceReportTableProps> = ({
         setIsDirty(false);
     }, [event.id]);
 
-    const [searchQuery, setSearchQuery] = useState('');
-    const [loading, setLoading] = useState(false);
-
     const filteredStudents = students.filter((s) => {
         if (!searchQuery.trim()) return true;
         const q = searchQuery.toLowerCase();
-        return s.name?.toLowerCase().includes(q) || s.phone?.includes(q);
+        return (s.name || s.fullName || '')?.toLowerCase().includes(q) || s.phone?.includes(q);
     });
 
-    const handleToggleStatus = (studentId: string, status: boolean) => {
+    const handleToggleStatus = (studentId: string, status: AttendanceStatus) => {
         setIsDirty(true);
         setTempAtt((prev) => ({ ...prev, [studentId]: status }));
     };
@@ -86,14 +84,16 @@ export const AttendanceReportTable: React.FC<AttendanceReportTableProps> = ({
             const studentIds = Object.keys(tempAtt);
             for (const sId of studentIds) {
                 const status = tempAtt[sId];
-                await setDoc(
-                    doc(db, 'artifacts', appId, 'public', 'data', 'attendance', sId),
-                    { [event.id]: status },
-                    { merge: true }
-                );
+                if (status !== undefined) {
+                    await setDoc(
+                        doc(db, 'artifacts', appId, 'public', 'data', 'attendance', sId),
+                        { [event.id]: status },
+                        { merge: true }
+                    );
+                }
             }
             setIsDirty(false);
-            showToast(`נוכחות עבור "${event.title}" עודכנה בהצלחה!`);
+            showToast(`נוכחות עבור "${event.title}" נשמרה בהצלחה!`);
             setLoading(false);
             if (onClose) onClose();
         } catch (err: any) {
@@ -103,6 +103,7 @@ export const AttendanceReportTable: React.FC<AttendanceReportTableProps> = ({
     };
 
     const attendedCount = Object.values(tempAtt).filter((v) => v === true).length;
+    const missingCount = Object.values(tempAtt).filter((v) => v === 'missing' || v === 'חסר').length;
     const absentCount = Object.values(tempAtt).filter((v) => v === false).length;
 
     return (
@@ -121,11 +122,16 @@ export const AttendanceReportTable: React.FC<AttendanceReportTableProps> = ({
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2 self-start sm:self-auto">
-                    <span className="text-[12px] font-medium bg-white text-[#188038] px-3 py-1 rounded-full border border-[#188038]/40">
+                {/* Status Badges */}
+                <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+                    <span className="text-[12px] font-medium bg-[#e6f4ea] text-[#137333] px-3 py-1 rounded-full border border-[#ceead6]">
                         נכחו: {attendedCount}
                     </span>
-                    <span className="text-[12px] font-medium bg-white text-[#d93025] px-3 py-1 rounded-full border border-[#d93025]/40">
+                    <span className="text-[12px] font-medium bg-[#fef7e0] text-[#b06000] px-3 py-1 rounded-full border border-[#feefc3] flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-[#f9ab00] inline-block" />
+                        חסרים: {missingCount}
+                    </span>
+                    <span className="text-[12px] font-medium bg-[#fce8e6] text-[#c5221f] px-3 py-1 rounded-full border border-[#fad2cf]">
                         נעדרו: {absentCount}
                     </span>
                 </div>
@@ -143,58 +149,76 @@ export const AttendanceReportTable: React.FC<AttendanceReportTableProps> = ({
                 />
             </div>
 
-            {/* Students List */}
-            <div className="space-y-2 max-h-96 overflow-y-auto pl-1">
-                {filteredStudents.map((s) => {
-                    const sId = s.id || s.phone || '';
-                    const status = tempAtt[sId];
+            {/* Clean, Compact Students List (no cards, no departments, with ellipse toggle) */}
+            <div className="max-h-96 overflow-y-auto divide-y divide-[#dadce0] border border-[#dadce0] rounded-xl bg-white">
+                {filteredStudents.length === 0 ? (
+                    <div className="text-center py-8 text-[13px] text-[#5f6368]">לא נמצאו חניכים התואמים את החיפוש.</div>
+                ) : (
+                    filteredStudents.map((s) => {
+                        const sId = s.id || s.phone || (s as any).firestoreId || '';
+                        const status = tempAtt[sId];
+                        const isPresent = status === true;
+                        const isMissing = status === 'missing' || status === 'חסר';
+                        const isAbsent = status === false;
 
-                    return (
-                        <div
-                            key={sId}
-                            className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-[#f8f9fa] hover:bg-white rounded-lg border border-[#dadce0] transition-all gap-2"
-                        >
-                            <div className="flex items-center gap-2.5">
-                                <img
-                                    src={getUserAvatar(s.role)}
-                                    alt={s.name}
-                                    className="w-8 h-8 rounded-full border border-[#dadce0] object-cover"
-                                />
-                                <div>
-                                    <span className="font-medium text-[13px] text-[#202124] block">{s.name}</span>
-                                    <span className="text-[11px] text-[#5f6368] font-normal">מחלקה {s.group || '-'}</span>
+                        return (
+                            <div
+                                key={sId}
+                                className="flex items-center justify-between py-2.5 px-3 hover:bg-[#f8f9fa] transition-colors"
+                            >
+                                <span className="font-medium text-[14px] text-[#202124]">
+                                    {s.name || s.fullName}
+                                </span>
+
+                                {/* Ellipse Selection Buttons: Check (V), Dot in middle, X */}
+                                <div className="flex items-center bg-[#f1f3f4] p-1 rounded-full border border-[#dadce0] gap-1 shrink-0">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleToggleStatus(sId, true)}
+                                        title="נכח"
+                                        aria-label="נכח"
+                                        className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
+                                            isPresent
+                                                ? 'bg-[#188038] text-white shadow-sm'
+                                                : 'text-[#5f6368] hover:text-[#202124]'
+                                        }`}
+                                    >
+                                        <Check size={14} className="stroke-[2.5]" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleToggleStatus(sId, 'missing')}
+                                        title="חסר"
+                                        aria-label="חסר"
+                                        className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
+                                            isMissing
+                                                ? 'bg-[#f9ab00] text-white shadow-sm'
+                                                : 'text-[#5f6368] hover:text-[#202124]'
+                                        }`}
+                                    >
+                                        <div className={`w-2 h-2 rounded-full ${isMissing ? 'bg-white' : 'bg-[#5f6368]'}`} />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleToggleStatus(sId, false)}
+                                        title="נעדר"
+                                        aria-label="נעדר"
+                                        className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
+                                            isAbsent
+                                                ? 'bg-[#d93025] text-white shadow-sm'
+                                                : 'text-[#5f6368] hover:text-[#202124]'
+                                        }`}
+                                    >
+                                        <X size={14} className="stroke-[2.5]" />
+                                    </button>
                                 </div>
                             </div>
-
-                            <div className="flex gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => handleToggleStatus(sId, true)}
-                                    className={`px-3 py-1 rounded-full text-[12px] font-medium flex items-center gap-1 transition-all ${
-                                        status === true
-                                            ? 'bg-[#188038] text-white'
-                                            : 'bg-[#f1f3f4] text-[#3c4043] hover:bg-[#e8eaed]'
-                                    }`}
-                                >
-                                    <Check size={14} /> נכח
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => handleToggleStatus(sId, false)}
-                                    className={`px-3 py-1 rounded-full text-[12px] font-medium flex items-center gap-1 transition-all ${
-                                        status === false
-                                            ? 'bg-[#d93025] text-white'
-                                            : 'bg-[#f1f3f4] text-[#3c4043] hover:bg-[#e8eaed]'
-                                    }`}
-                                >
-                                    <X size={14} /> נעדר
-                                </button>
-                            </div>
-                        </div>
-                    );
-                })}
+                        );
+                    })
+                )}
             </div>
 
+            {/* Footer Actions */}
             <div className="flex gap-3 pt-2">
                 {onClose && (
                     <button
@@ -209,9 +233,9 @@ export const AttendanceReportTable: React.FC<AttendanceReportTableProps> = ({
                     type="button"
                     onClick={handleSaveAll}
                     disabled={loading}
-                    className="flex-1 h-10 bg-[#1a73e8] hover:bg-[#1967d2] text-white rounded-full font-medium text-[14px] transition-all disabled:opacity-50"
+                    className="flex-1 h-10 bg-[#1a73e8] hover:bg-[#1967d2] text-white rounded-full font-medium text-[14px] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                    {loading ? 'שומר נוכחות...' : 'עדכן נוכחות'}
+                    {loading ? 'שומר נוכחות...' : isDirty ? 'שמור שינויים בנוכחות *' : 'שמור נוכחות'}
                 </button>
             </div>
         </div>

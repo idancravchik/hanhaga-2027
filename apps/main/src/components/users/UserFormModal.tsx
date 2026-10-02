@@ -4,7 +4,7 @@ import { doc, setDoc } from 'firebase/firestore';
 import { db, appId } from '@/config/firebase';
 import { UserProfile, UserRole } from '@/types/user';
 import { validateUserForm } from '@/utils/validation';
-import { SCHOOL_LIST } from '@/config/constants';
+import { SCHOOL_LIST, TAGS_CATALOG, getTagColorClasses } from '@/config/constants';
 import { normalizePhone } from '@/utils/normalize';
 
 interface UserFormModalProps {
@@ -24,6 +24,23 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ userToEdit, onClos
     const schoolContainerRef = useRef<HTMLDivElement>(null);
     const [group, setGroup] = useState<number | string>(userToEdit?.group !== undefined ? userToEdit.group : 1);
     const [role, setRole] = useState<UserRole>(userToEdit?.role || 'student');
+    const [tags, setTags] = useState<any[]>(() => {
+        return (userToEdit?.tags || []).map((t: any) => (typeof t === 'string' ? { id: t } : t));
+    });
+
+    const toggleTag = (tagId: string) => {
+        const exists = tags.some((t) => t.id === tagId);
+        if (exists) {
+            setTags(tags.filter((t) => t.id !== tagId));
+        } else {
+            const cat = TAGS_CATALOG.find((c) => c.id === tagId);
+            setTags([...tags, { id: tagId, label: cat?.label, detail: '' }]);
+        }
+    };
+
+    const updateTagDetail = (tagId: string, detail: string) => {
+        setTags(tags.map((t) => (t.id === tagId ? { ...t, detail } : t)));
+    };
 
     // Close dropup when clicking outside
     useEffect(() => {
@@ -87,7 +104,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ userToEdit, onClos
             school: finalSchool || 'לא שויך',
             group: Number(group) || 0,
             role,
-            tags: userToEdit?.tags || [],
+            tags: tags,
         };
 
         try {
@@ -249,6 +266,55 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ userToEdit, onClos
                             <option value="inspector">מפקח (Inspector)</option>
                             <option value="admin">מנהל (Admin)</option>
                         </select>
+                    </div>
+
+                    {/* Tags & Medical/Special Characteristics */}
+                    <div className="space-y-2 pt-2 border-t border-[#dadce0]">
+                        <div className="flex items-center justify-between">
+                            <label className="text-[13px] font-medium text-[#3c4043] block">תגיות ומאפיינים רפואיים / מיוחדים</label>
+                            <span className="text-[11px] text-[#5f6368] font-normal">{tags.length} תגיות נבחרו</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-2 border border-[#dadce0] rounded-[16px] bg-[#f8f9fa]">
+                            {TAGS_CATALOG.map((cat) => {
+                                const isSelected = tags.some((t) => t.id === cat.id);
+                                const badgeColor = getTagColorClasses(cat.color);
+                                return (
+                                    <button
+                                        key={cat.id}
+                                        type="button"
+                                        onClick={() => toggleTag(cat.id)}
+                                        className={`px-2.5 py-1 rounded-full text-[12px] font-medium border transition-all flex items-center gap-1 ${
+                                            isSelected
+                                                ? badgeColor + ' ring-2 ring-[#1a73e8]'
+                                                : 'bg-white text-[#3c4043] border-[#dadce0] hover:bg-[#e8eaed]'
+                                        }`}
+                                    >
+                                        {isSelected && <Check size={12} />}
+                                        {cat.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {/* Inline inputs for tags requiring specific details (allergies, special conditions) */}
+                        {tags.filter((t) => {
+                            const cat = TAGS_CATALOG.find((c) => c.id === t.id);
+                            return cat?.requiresDetail;
+                        }).map((t) => {
+                            const cat = TAGS_CATALOG.find((c) => c.id === t.id);
+                            return (
+                                <div key={t.id} className="flex items-center gap-2 bg-white p-2 rounded-lg border border-[#dadce0] text-[12px]">
+                                    <span className="font-medium text-[#c5221f] shrink-0">פירוט {cat?.label}:</span>
+                                    <input
+                                        type="text"
+                                        placeholder="למשל: בוטנים, אבקה, רמת חומרה..."
+                                        value={t.detail || ''}
+                                        onChange={(e) => updateTagDetail(t.id, e.target.value)}
+                                        className="flex-1 px-2 py-0.5 border border-[#dadce0] rounded text-[12px] text-[#202124] outline-none focus:border-[#1a73e8]"
+                                    />
+                                </div>
+                            );
+                        })}
                     </div>
 
                     <div className="flex justify-end gap-3 pt-4 border-t border-[#dadce0]">
