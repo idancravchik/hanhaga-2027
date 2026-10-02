@@ -100,10 +100,10 @@ export const StudentScheduleView: React.FC<StudentScheduleViewProps> = ({ events
                         const isPast = evDate ? evDate < now : false;
 
                         return (
-                            <div key={ev.id} className={`p-4 flex items-center justify-between gap-3 hover:bg-[#f8f9fa] transition-colors ${isPast ? 'opacity-85' : ''}`}>
+                            <div key={ev.id} className="p-4 flex items-center justify-between gap-3 hover:bg-[#f8f9fa] transition-colors">
                                 <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-2 mb-1">
-                                        <span className="text-[12px] font-normal text-[#5f6368]" dir="ltr">
+                                        <span className="text-[12px] font-medium text-[#3c4043]" dir="ltr">
                                             {evDate ? evDate.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' }) : ''}
                                         </span>
                                         <span className="text-[12px] font-normal px-2.5 py-0.5 rounded-full bg-[#f8f9fa] border border-[#dadce0] text-[#3c4043]">
@@ -111,7 +111,7 @@ export const StudentScheduleView: React.FC<StudentScheduleViewProps> = ({ events
                                         </span>
                                     </div>
                                     <h4 className="font-medium text-[15px] text-[#202124] truncate">{ev.title}</h4>
-                                    {ev.location && <p className="text-[12px] text-[#5f6368] font-normal truncate">{ev.location}</p>}
+                                    {ev.location && <p className="text-[12px] text-[#3c4043] font-normal truncate">{ev.location}</p>}
                                 </div>
 
                                 <div>

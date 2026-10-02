@@ -236,7 +236,7 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
                                 {exams.map(exam => {
                                     const g = grades[`${selectedStudentCard.id}_${exam.id}`];
                                     if (!g) return null;
-                                    const total = Object.values(g.scores).reduce((a, b) => (parseInt(a) || 0) + (parseInt(b) || 0), 0);
+                                    const total = Object.values(g?.scores || {}).reduce((a, b) => (parseInt(a) || 0) + (parseInt(b) || 0), 0);
 
                                     return (
                                         <div key={exam.id} className="p-5 border border-[#dadce0] rounded-[24px] bg-white">
@@ -247,8 +247,8 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
                                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mb-3">
                                                 {exam.categories.map((cat, i) => (
                                                     <div key={i} className="bg-[#f8f9fa] p-3 rounded-lg border border-[#dadce0] flex justify-between items-center">
-                                                        <span className="font-normal text-[#5f6368] text-[12px]">{cat.name}</span>
-                                                        <span className="font-medium text-[#202124] text-[13px] tabular-nums">{g.scores[cat.name] || 0} / {cat.maxScore ?? cat.max ?? 100}</span>
+                                                        <span className="font-medium text-[#3c4043] text-[12px]">{cat.name}</span>
+                                                        <span className="font-medium text-[#202124] text-[13px] tabular-nums">{g?.scores?.[cat.name] || 0} / {cat.maxScore ?? cat.max ?? 100}</span>
                                                     </div>
                                                 ))}
                                             </div>
@@ -285,7 +285,7 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
                                     await setDoc(doc(db, 'artifacts', appId, 'public', 'config'), { staffLoginMethod: nextMethod }, { merge: true });
                                     showToast(nextMethod === 'otp' ? "מצב כניסת צוות שונה ל-SMS (OTP)" : "מצב כניסת צוות שונה לקוד גישה סטטי");
                                 }}
-                                className="h-9 px-3 rounded-full transition-colors bg-[#f8f9fa] text-[#1a73e8] border border-[#dadce0] hover:bg-[#e8f0fe] flex items-center gap-1.5 font-medium text-[13px]"
+                                className="h-9 px-3 rounded-full transition-colors bg-[#f8f9fa] text-[#174ea6] border border-[#dadce0] hover:bg-[#e8f0fe] flex items-center gap-1.5 font-medium text-[13px]"
                                 title={siteSettings?.staffLoginMethod === 'otp' ? 'שנה מצב כניסת צוות לקוד סטטי' : 'שנה מצב כניסת צוות ל-SMS OTP'}
                             >
                                 {siteSettings?.staffLoginMethod === 'otp' ? <Smartphone size={16} /> : <KeyRound size={16} />}
@@ -297,24 +297,24 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
                                     await setDoc(doc(db, 'artifacts', appId, 'public', 'config'), { isSiteClosed: isClosed }, { merge: true });
                                     showToast(isClosed ? "האתר נסגר כעת למשתמשים" : "האתר נפתח מחדש למשתמשים", isClosed ? "error" : "success");
                                 }}
-                                className={`h-9 px-3 rounded-full transition-colors border ${siteSettings?.isSiteClosed ? 'bg-[#fce8e6] text-[#d93025] border-[#fce8e6]' : 'bg-[#f8f9fa] text-[#5f6368] border-[#dadce0] hover:text-[#202124]'}`}
+                                className={`h-9 px-3 rounded-full transition-colors border ${siteSettings?.isSiteClosed ? 'bg-[#fce8e6] text-[#991b1b] border-[#fce8e6]' : 'bg-[#f8f9fa] text-[#3c4043] border-[#dadce0] hover:text-[#202124]'}`}
                                 title={siteSettings?.isSiteClosed ? 'פתח אתר' : 'נעילת אתר חירום למשתמשים'}
                             >
                                 {siteSettings?.isSiteClosed ? <Lock size={16} /> : <Unlock size={16} />}
                             </button>
                         </>
                     )}
-                    <button onClick={() => setView('login')} className="h-9 px-4 rounded-full text-[#d93025] font-medium bg-[#fce8e6] hover:bg-[#fad2cf] transition-colors text-[13px]">התנתק</button>
+                    <button onClick={() => setView('login')} className="h-9 px-4 rounded-full text-[#991b1b] font-semibold bg-[#fee2e2] hover:bg-[#fecaca] transition-colors text-[13px]">התנתק</button>
                 </div>
             </header>
 
             {/* Admin Subview Navigation Bar */}
             <div className="flex w-full bg-white p-1 rounded-full border border-[#dadce0] gap-1 overflow-x-auto no-scrollbar shrink-0">
-                <button onClick={() => setAdminSubView('reports')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all ${adminSubView === 'reports' ? 'bg-[#1a73e8] text-white' : 'text-[#5f6368] hover:text-[#202124]'}`}>דוחות קורס</button>
-                <button onClick={() => setAdminSubView('analytics')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all ${adminSubView === 'analytics' ? 'bg-[#1a73e8] text-white' : 'text-[#5f6368] hover:text-[#202124]'}`}>אנליטיקה</button>
-                <button onClick={() => setAdminSubView('users')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all ${adminSubView === 'users' ? 'bg-[#1a73e8] text-white' : 'text-[#5f6368] hover:text-[#202124]'}`}>משתמשים</button>
-                <button onClick={() => setAdminSubView('exams')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all ${adminSubView === 'exams' ? 'bg-[#1a73e8] text-white' : 'text-[#5f6368] hover:text-[#202124]'}`}>מבחנים</button>
-                <button onClick={() => setAdminSubView('events')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all ${adminSubView === 'events' ? 'bg-[#1a73e8] text-white' : 'text-[#5f6368] hover:text-[#202124]'}`}>לוח אירועים</button>
+                <button onClick={() => setAdminSubView('reports')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all ${adminSubView === 'reports' ? 'bg-[#1a73e8] text-white' : 'text-[#3c4043] hover:text-[#202124]'}`}>דוחות קורס</button>
+                <button onClick={() => setAdminSubView('analytics')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all ${adminSubView === 'analytics' ? 'bg-[#1a73e8] text-white' : 'text-[#3c4043] hover:text-[#202124]'}`}>אנליטיקה</button>
+                <button onClick={() => setAdminSubView('users')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all ${adminSubView === 'users' ? 'bg-[#1a73e8] text-white' : 'text-[#3c4043] hover:text-[#202124]'}`}>משתמשים</button>
+                <button onClick={() => setAdminSubView('exams')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all ${adminSubView === 'exams' ? 'bg-[#1a73e8] text-white' : 'text-[#3c4043] hover:text-[#202124]'}`}>מבחנים</button>
+                <button onClick={() => setAdminSubView('events')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all ${adminSubView === 'events' ? 'bg-[#1a73e8] text-white' : 'text-[#3c4043] hover:text-[#202124]'}`}>לוח אירועים</button>
             </div>
 
             {/* SubView Contents */}
@@ -627,8 +627,8 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
                             </div>
                         </div>
                         <div className="flex-1 min-w-[200px]">
-                            <label className="text-[13px] font-medium text-[#3c4043] block mb-2 mr-1">סנן לפי מחלקה</label>
-                            <select className="w-full h-10 px-3 rounded border border-[#dadce0] bg-white font-normal text-[13px] text-right text-[#3c4043] outline-none focus:border-[#1a73e8]" value={filterDept} onChange={e => setFilterDept(e.target.value)}>
+                            <label htmlFor="department-filter" className="text-[13px] font-medium text-[#3c4043] block mb-2 mr-1">סנן לפי מחלקה</label>
+                            <select id="department-filter" aria-label="סנן לפי מחלקה" className="w-full h-10 px-3 rounded border border-[#dadce0] bg-white font-normal text-[13px] text-right text-[#3c4043] outline-none focus:border-[#1a73e8]" value={filterDept} onChange={e => setFilterDept(e.target.value)}>
                                 <option value="all">כל המחלקות</option>
                                 {[...new Set(uniqueUsersList.map(u => parseInt(u.group) || 0))].filter(g => g > 0).sort((a, b) => a - b).map(g => <option key={g} value={g.toString()}>מחלקה {g}</option>)}
                             </select>
@@ -636,10 +636,10 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
                         <button onClick={handleExportCSV} className="h-10 px-6 bg-[#1a73e8] hover:bg-[#1967d2] text-white rounded-full font-medium text-[14px] flex items-center gap-2 transition-all shrink-0"><Download size={18} /> ייצוא CSV</button>
                     </div>
                     <div className="bg-white rounded-[24px] border border-[#dadce0] overflow-hidden">
-                        <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+                        <div className="overflow-x-auto max-h-[600px] overflow-y-auto" tabIndex={0} role="region" aria-label="טבלת נתוני דוחות">
                             <table className="w-full text-right border-collapse" dir="rtl">
                                 <thead className="sticky top-0 z-10 bg-[#f8f9fa] border-b border-[#dadce0]">
-                                    <tr className="text-[#5f6368] text-[12px] font-medium border-b border-[#dadce0]">
+                                    <tr className="text-[#3c4043] text-[12px] font-semibold border-b border-[#dadce0]">
                                         <th className="p-4">חניך</th>
                                         <th className="p-4">מחלקה</th>
                                         <th className="p-4">בית ספר</th>
