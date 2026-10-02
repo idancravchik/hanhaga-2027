@@ -100,9 +100,18 @@ async function run() {
     }
 
     // 1.3 Hardcoded Passcode & Master Admin Credentials in Client Source
+    let staffPasscode = process.env.VITE_STAFF_PASSCODE;
+    if (!staffPasscode) {
+        try {
+            const envLocal = fs.readFileSync(path.join(__dirname, '../.env.local'), 'utf8');
+            const match = envLocal.match(/VITE_STAFF_PASSCODE=(.*)/);
+            if (match) staffPasscode = match[1].trim();
+        } catch {}
+    }
+
     try {
         const authContextCode = fs.readFileSync('C:\\Users\\jnux9\\OneDrive\\שולחן העבודה\\hanhaga-2027\\.worktrees\\testing-revision-02-10-2026\\apps\\main\\src\\context\\AuthContext.tsx', 'utf8');
-        const hasHardcodedPasscode = authContextCode.includes('idanaviv100');
+        const hasHardcodedPasscode = staffPasscode ? authContextCode.includes(staffPasscode) : false;
         const hasHardcodedAdminPhone = authContextCode.includes('0507117791');
 
         if (hasHardcodedPasscode || hasHardcodedAdminPhone) {
@@ -111,7 +120,7 @@ async function run() {
                 title: 'Hardcoded Passcode & Master Admin Credentials in Client Code',
                 severity: 'HIGH',
                 status: 'FAIL',
-                details: 'AuthContext.tsx embeds a fallback passcode "idanaviv100" and hardcoded master admin phone "0507117791" directly in the client bundle. Any user inspecting source code or network traffic can discover this bypass.',
+                details: 'AuthContext.tsx embeds sensitive credentials or master admin phones directly in the client bundle. Any user inspecting source code or network traffic can discover this bypass.',
                 recommendation: 'Remove hardcoded credentials from client-side code. Manage authentication secrets on the backend/Firebase Cloud Functions.'
             });
         } else {
@@ -349,8 +358,8 @@ async function run() {
     // -------------------------------------------------------------
     console.log('Auditing Admin View (Reports, Users, Modals)...');
     // Authenticate properly with verified admin session for Admin View audit
-    await page.evaluate(() => {
-        const staffPasscode = 'idanaviv100';
+    await page.evaluate((passcode) => {
+        const staffPasscode = passcode || '';
         const adminPhone = '0507117791';
         const dummyAdminProfile = {
             id: adminPhone,
@@ -364,7 +373,7 @@ async function run() {
         const expiresAt = Date.now() + 24 * 60 * 60 * 1000;
         const staffToken = btoa(`${adminPhone}:${staffPasscode}`);
         localStorage.setItem('hanhaga_profile', JSON.stringify({ profile: dummyAdminProfile, expiresAt, staffToken }));
-    });
+    }, staffPasscode);
 
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(1200);
