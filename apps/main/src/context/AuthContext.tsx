@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { onAuthStateChanged, signInAnonymously, signOut, User } from 'firebase/auth';
-import { auth } from '@/config/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db, appId } from '@/config/firebase';
 import { UserProfile, UserRole } from '@/types/user';
 import { normalizeName, normalizePhone } from '@/utils/normalize';
 
@@ -21,6 +22,16 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const STORAGE_KEY = 'hanhaga_profile';
 const SESSION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
+const getStaffToken = (phone: string = '') => {
+    const passcode = (import.meta.env.VITE_STAFF_PASSCODE || '').trim();
+    if (!passcode || !phone) return '';
+    try {
+        return btoa(`${phone}:${passcode}`);
+    } catch {
+        return '';
+    }
+};
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
     const [profile, setProfile] = useState<UserProfile | null>(() => {
@@ -29,17 +40,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (!raw) return null;
             const parsed = JSON.parse(raw);
             if (parsed && typeof parsed === 'object') {
-                if (parsed.expiresAt) {
-                    if (Date.now() > parsed.expiresAt) {
+                if (parsed.expiresAt && Date.now() > parsed.expiresAt) {
+                    localStorage.removeItem(STORAGE_KEY);
+                    return null;
+                }
+                const p = parsed.profile || parsed;
+                if (!p) return null;
+
+                // SEC-05: Prevent client-side role escalation via localStorage tampering
+                if (p.role && p.role !== 'student') {
+                    const expectedToken = getStaffToken(p.phone || p.id);
+                    if (!expectedToken || parsed.staffToken !== expectedToken) {
+                        console.warn('[SECURITY] Forged or unverified staff session detected in localStorage. Clearing session.');
                         localStorage.removeItem(STORAGE_KEY);
                         return null;
                     }
-                    return parsed.profile || null;
                 }
-                // Legacy session migration: attach 24h expiration
-                const expiresAt = Date.now() + SESSION_DURATION_MS;
-                localStorage.setItem(STORAGE_KEY, JSON.stringify({ profile: parsed, expiresAt }));
-                return parsed;
+                return p;
             }
             return null;
         } catch {
@@ -73,6 +90,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }, [profile, user]);
 
+    // Security Guard: Verify privileged roles (admin, instructor, assistant, inspector) to prevent client-side role escalation
+    useEffect(() => {
+        if (!profile || profile.role === 'student') return;
+        const phone = profile.phone || profile.id;
+        if (!phone) return;
+
+        const verifyStaffSession = async () => {
+            try {
+                await ensureAuth();
+                const userDoc = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', phone));
+                if (userDoc.exists()) {
+                    const data = userDoc.data();
+                    if (data.role !== profile.role) {
+                        console.warn('[SECURITY] Role mismatch detected! Demoting session.');
+                        setSessionProfile({ ...profile, role: (data.role || 'student') });
+                    }
+                } else {
+                    const bootstrapPhone = import.meta.env.VITE_ADMIN_BOOTSTRAP_PHONE;
+                    if (!bootstrapPhone || phone !== bootstrapPhone) {
+                        console.warn('[SECURITY] Forged staff profile detected! Clearing session.');
+                        setSessionProfile(null);
+                    }
+                }
+            } catch (err) {
+                console.warn('Role verification check failed:', err);
+            }
+        };
+        verifyStaffSession();
+    }, [profile?.role, profile?.id, profile?.phone]);
+
     const ensureAuth = async () => {
         if (!auth.currentUser) {
             try {
@@ -89,13 +136,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setProfile(p);
         if (p) {
             const expiresAt = Date.now() + SESSION_DURATION_MS;
-            localStorage.setItem(STORAGE_KEY, JSON.stringify({ profile: p, expiresAt }));
+            const staffToken = (p.role && p.role !== 'student') ? getStaffToken(p.phone || p.id || '') : undefined;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({ profile: p, expiresAt, staffToken }));
         } else {
             localStorage.removeItem(STORAGE_KEY);
         }
     };
 
-    // Student Login: No SMS required, validates against user list
+    // Student Login: No SMS required, validates against user list or direct Firestore lookup
     const loginStudent = async (name: string, phone: string, usersList: UserProfile[]): Promise<{ success: boolean; message?: string }> => {
         const normName = normalizeName(name);
         const normPhone = normalizePhone(phone);
@@ -103,11 +151,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (!normName) return { success: false, message: 'הכנס שם מלא' };
         if (!normPhone || normPhone.length < 9) return { success: false, message: 'הכנס מספר טלפון תקין' };
 
-        const found = usersList.find((u) => {
+        let found = (usersList || []).find((u) => {
             const uName = normalizeName(u.name || u.fullName);
             const uPhone = normalizePhone(u.phone || u.id);
             return uName === normName && uPhone === normPhone;
         });
+
+        // Cold-load direct document lookup: resolves race conditions when usersList is not yet loaded
+        if (!found) {
+            try {
+                await ensureAuth();
+                const userDoc = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', normPhone));
+                if (userDoc.exists()) {
+                    const data = userDoc.data();
+                    const uName = normalizeName(data.name || data.fullName);
+                    if (uName === normName) {
+                        found = { id: userDoc.id, phone: userDoc.id, ...data } as UserProfile;
+                    }
+                }
+            } catch (err) {
+                console.warn('Direct user lookup fallback failed:', err);
+            }
+        }
 
         if (!found) {
             return { success: false, message: 'משתמש לא נמצא. וודא שהפרטים מופעים במערכת.' };
@@ -216,36 +281,58 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     ): Promise<{ success: boolean; message?: string }> => {
         const normName = normalizeName(name);
         const normPhone = normalizePhone(phone);
-        const expectedPasscode = import.meta.env.VITE_STAFF_PASSCODE || 'idanaviv100';
+        const expectedPasscode = (import.meta.env.VITE_STAFF_PASSCODE || '').trim();
 
         if (!normName) return { success: false, message: 'הכנס שם מלא' };
         if (!normPhone || normPhone.length < 9) return { success: false, message: 'הכנס מספר טלפון תקין' };
-        if (!passcode || passcode.trim() !== expectedPasscode.trim()) {
+        if (!passcode || !expectedPasscode || passcode.trim() !== expectedPasscode) {
             return { success: false, message: 'קוד גישה סטטי שגוי' };
         }
 
-        const found = usersList.find((u) => {
+        let found = (usersList || []).find((u) => {
             const uName = normalizeName(u.name || u.fullName);
             const uPhone = normalizePhone(u.phone || u.id);
             return uName === normName && uPhone === normPhone;
         });
 
+        // Cold-load direct document lookup fallback
         if (!found) {
-            // Master Admin Bootstrap: allow initial login for system owner if not yet in database
-            if (normName === normalizeName("עידן קרבצ'יק") && normPhone === normalizePhone("0507117791")) {
+            try {
+                await ensureAuth();
+                const userDoc = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', normPhone));
+                if (userDoc.exists()) {
+                    const data = userDoc.data();
+                    const uName = normalizeName(data.name || data.fullName);
+                    if (uName === normName) {
+                        found = { id: userDoc.id, phone: userDoc.id, ...data } as UserProfile;
+                    }
+                }
+            } catch (err) {
+                console.warn('Direct staff lookup error:', err);
+            }
+        }
+
+        const bootstrapName = import.meta.env.VITE_ADMIN_BOOTSTRAP_NAME;
+        const bootstrapPhone = import.meta.env.VITE_ADMIN_BOOTSTRAP_PHONE;
+
+        if (!found && bootstrapName && bootstrapPhone) {
+            if (normName === normalizeName(bootstrapName) && normPhone === normalizePhone(bootstrapPhone)) {
                 const masterAdmin: UserProfile = {
-                    id: "0507117791",
-                    name: "עידן קרבצ'יק",
-                    fullName: "עידן קרבצ'יק",
-                    phone: "0507117791",
-                    role: "admin",
-                    school: "מנהלה",
+                    id: normPhone,
+                    name: bootstrapName,
+                    fullName: bootstrapName,
+                    phone: normPhone,
+                    role: 'admin',
+                    school: 'מנהלה',
                     tags: []
                 };
                 await ensureAuth();
                 setSessionProfile(masterAdmin);
                 return { success: true };
             }
+        }
+
+        if (!found) {
             return { success: false, message: 'איש צוות לא נמצא במערכת.' };
         }
 

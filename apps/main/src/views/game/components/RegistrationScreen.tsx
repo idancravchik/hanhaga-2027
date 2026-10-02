@@ -159,6 +159,7 @@ export const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ onStartG
             />
             <button
               type="submit"
+              aria-label="הוסף משתתף לקבוצה"
               className="bg-[#FFD166] text-black border-4 border-black px-3.5 py-2 rounded-xl font-black cursor-pointer active:translate-y-0.5"
             >
               <Plus className="w-5 h-5 stroke-[3]" />
@@ -180,6 +181,7 @@ export const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ onStartG
                   <span>{member}</span>
                   <button
                     type="button"
+                    aria-label={`הסר משתתף ${member}`}
                     onClick={() => handleRemoveMember(idx)}
                     className="cursor-pointer"
                   >
