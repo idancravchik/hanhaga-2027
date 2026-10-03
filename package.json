@@ -5,11 +5,13 @@
   "description": "Unified Hanhaga Portal & Applications",
   "type": "module",
   "scripts": {
-    "install:all": "npm install --prefix apps/main",
+    "install:all": "npm install --prefix apps/main && npm install --prefix functions",
     "build:main": "npm run build --prefix apps/main",
+    "build:api": "npm run build --prefix functions",
     "build": "node scripts/build.mjs",
     "type-check": "npm run type-check --prefix apps/main",
     "lint": "npm run lint --prefix apps/main",
-    "seed:admin": "node scripts/seed-admin.mjs"
+    "seed:admin": "node scripts/seed-admin.mjs",
+    "keys": "node scripts/manage-api-keys.mjs"
   }
 }

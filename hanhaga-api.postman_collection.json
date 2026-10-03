@@ -1,0 +1,228 @@
+{
+  "info": {
+    "_postman_id": "hanhaga-2027-api-v1",
+    "name": "Hanhaga 2027 REST API v1",
+    "description": "Postman Collection for Hanhaga-2027 External REST API v1 (Attendance, Students, Events, Exams, Grades, Reports).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://hanhaga-2027.web.app/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "apiKey",
+      "value": "hng_live_YXUHW91VUmvB-9_FGdpQ3gVeEmv5Z3V-",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Students",
+      "item": [
+        {
+          "name": "Get Students List (Cursor Paged)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-API-Key", "value": "{{apiKey}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/students?limit=25",
+              "host": ["{{baseUrl}}"],
+              "path": ["students"],
+              "query": [
+                { "key": "limit", "value": "25" },
+                { "key": "cursor", "value": "", "disabled": true },
+                { "key": "school", "value": "", "disabled": true },
+                { "key": "department", "value": "", "disabled": true }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Events",
+      "item": [
+        {
+          "name": "Get Events List",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-API-Key", "value": "{{apiKey}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["events"],
+              "query": [
+                { "key": "type", "value": "מפגש", "disabled": true }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Attendance",
+      "item": [
+        {
+          "name": "Get Attendance Records",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-API-Key", "value": "{{apiKey}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attendance?eventId=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["attendance"],
+              "query": [
+                { "key": "eventId", "value": "1" },
+                { "key": "studentId", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Record Single Student Attendance",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-API-Key", "value": "{{apiKey}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" },
+              { "key": "Idempotency-Key", "value": "idem-att-test-001", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"0521234567\",\n  \"eventId\": \"1\",\n  \"status\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/attendance",
+              "host": ["{{baseUrl}}"],
+              "path": ["attendance"]
+            }
+          }
+        },
+        {
+          "name": "Batch Record Attendance",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-API-Key", "value": "{{apiKey}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" },
+              { "key": "Idempotency-Key", "value": "idem-att-batch-001", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventId\": \"1\",\n  \"records\": [\n    {\n      \"studentId\": \"0521234567\",\n      \"status\": true\n    },\n    {\n      \"studentId\": \"0547654321\",\n      \"status\": false\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/attendance/batch",
+              "host": ["{{baseUrl}}"],
+              "path": ["attendance", "batch"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Exams & Grades",
+      "item": [
+        {
+          "name": "Get Exams Definitions",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-API-Key", "value": "{{apiKey}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/exams",
+              "host": ["{{baseUrl}}"],
+              "path": ["exams"]
+            }
+          }
+        },
+        {
+          "name": "Get Grades",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-API-Key", "value": "{{apiKey}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/grades",
+              "host": ["{{baseUrl}}"],
+              "path": ["grades"],
+              "query": [
+                { "key": "examId", "value": "", "disabled": true },
+                { "key": "studentId", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Submit Single Student Grade",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-API-Key", "value": "{{apiKey}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" },
+              { "key": "Idempotency-Key", "value": "idem-grade-test-001", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"0521234567\",\n  \"examId\": \"exam_1\",\n  \"scores\": {\n    \"ניווט\": 40,\n    \"פיקוד\": 60\n  },\n  \"verbalComment\": \"ביצוע מצוין של תרגיל השטח\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/grades",
+              "host": ["{{baseUrl}}"],
+              "path": ["grades"]
+            }
+          }
+        },
+        {
+          "name": "Batch Submit Grades",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-API-Key", "value": "{{apiKey}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" },
+              { "key": "Idempotency-Key", "value": "idem-grade-batch-001", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"examId\": \"exam_1\",\n  \"records\": [\n    {\n      \"studentId\": \"0521234567\",\n      \"scores\": { \"ניווט\": 40, \"פיקוד\": 60 },\n      \"verbalComment\": \"ביצוע מצוין\"\n    },\n    {\n      \"studentId\": \"0547654321\",\n      \"scores\": { \"ניווט\": 35, \"פיקוד\": 50 }\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/grades/batch",
+              "host": ["{{baseUrl}}"],
+              "path": ["grades", "batch"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "item": [
+        {
+          "name": "Get Summary Analytics",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-API-Key", "value": "{{apiKey}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/summary",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "summary"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
