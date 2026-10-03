@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { X, Tag, Plus, MessageSquare, Award, Calendar, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Tag, Plus, BookOpen, Award, Calendar, AlertCircle } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
-import { db, appId } from '@/config/firebase';
+import { signInAnonymously } from 'firebase/auth';
+import { auth, db, appId } from '@/config/firebase';
 import { UserProfile } from '@/types/user';
 import { TAGS_CATALOG, getTagColorClasses, getUserAvatar } from '@/config/constants';
 
@@ -28,35 +29,47 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
     eventsList,
     showToast,
 }) => {
-    const [newNote, setNewNote] = useState('');
+    const studentId = student?.id || student?.phone || '';
+    const noteData = notes[studentId] || notes[student?.phone || ''] || notes[student?.firestoreId || ''] || {};
+    const initialNote = noteData?.content || noteData?.text || '';
+
+    const [personalNote, setPersonalNote] = useState(initialNote);
+    const [isSavingNote, setIsSavingNote] = useState(false);
     const [addingTag, setAddingTag] = useState(false);
     const [selectedTagId, setSelectedTagId] = useState('');
     const [tagDetail, setTagDetail] = useState('');
 
+    useEffect(() => {
+        const currentContent = noteData?.content || noteData?.text || '';
+        setPersonalNote(currentContent);
+    }, [studentId, noteData?.content, noteData?.text]);
+
     if (!student) return null;
 
-    const studentId = student.id || student.phone || '';
     const studentAtt = attendance[studentId] || {};
-    const studentNotes = Object.values(notes || {}).filter((n: any) => n.studentId === studentId);
     const isStaff = ['admin', 'instructor', 'assistant', 'inspector'].includes((currentProfile?.role || '').toLowerCase());
 
-    const handleAddNote = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!newNote.trim()) return;
-
+    const handleSavePersonalNote = async () => {
+        if (!studentId) return;
+        setIsSavingNote(true);
         try {
-            const noteId = `${studentId}_${Date.now()}`;
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notes', noteId), {
-                id: noteId,
+            if (!auth.currentUser) {
+                await signInAnonymously(auth);
+            }
+            const authorName = currentProfile?.name || currentProfile?.fullName || 'איש צוות';
+            const payload = {
                 studentId,
-                text: newNote.trim(),
-                author: currentProfile?.name || currentProfile?.fullName || 'איש צוות',
-                createdAt: new Date().toISOString(),
-            });
-            setNewNote('');
-            showToast('הערה נוספה בהצלחה!');
+                content: personalNote.trim(),
+                author: authorName,
+                updatedAt: new Date().toISOString(),
+            };
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notes', studentId), payload, { merge: true });
+            showToast('נשמר בתיק האישי!');
         } catch (err) {
-            showToast('שגיאה בהוספת הערה', 'error');
+            console.error('Error saving personal note:', err);
+            showToast('שגיאה בשמירת התיק האישי', 'error');
+        } finally {
+            setIsSavingNote(false);
         }
     };
 
@@ -87,7 +100,7 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
     };
 
     return (
-        <div role="dialog" aria-modal="true" className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-[#202124]/50" dir="rtl">
+        <div role="dialog" aria-modal="true" aria-labelledby="student-profile-title" className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-[#202124]/50" dir="rtl">
             <div className="bg-white rounded-[24px] border border-[#dadce0] w-full max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6 relative text-right text-[#202124]" dir="rtl">
                 {/* Close Button */}
                 <button
@@ -107,7 +120,7 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
                         className="w-16 h-16 rounded-full object-cover border border-[#dadce0]"
                     />
                     <div>
-                        <h2 className="text-[22px] font-medium text-[#202124]">{student.name || student.fullName}</h2>
+                        <h2 id="student-profile-title" className="text-[22px] font-medium text-[#202124]">{student.name || student.fullName}</h2>
                         <div className="flex items-center gap-2 text-[13px] text-[#5f6368] font-normal mt-1">
                             <span>{student.school}</span>
                             <span>•</span>
@@ -148,7 +161,7 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
 
                                 return (
                                     <span
-                                        key={idx}
+                                        key={`student_tag_${tagId}_${idx}`}
                                         className={`px-3 py-1 rounded-full text-[12px] font-normal border border-[#dadce0] bg-[#f8f9fa] text-[#3c4043] flex items-center gap-1.5 ${colorClass}`}
                                     >
                                         {label}
@@ -223,14 +236,14 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
                         {exams.length === 0 ? (
                             <div className="text-[12px] text-[#5f6368] italic">אין מבחנים במערכת</div>
                         ) : (
-                            exams.map((exam) => {
+                            exams.map((exam, idx) => {
                                 const g = grades[`${studentId}_${exam.id}`];
                                 const totalScore = g
                                     ? Object.values(g.scores || {}).reduce((a: any, b: any) => (parseInt(a) || 0) + (parseInt(b) || 0), 0)
                                     : null;
 
                                 return (
-                                    <div key={exam.id} className="p-3.5 bg-[#f8f9fa] rounded-lg border border-[#dadce0] flex items-center justify-between">
+                                    <div key={`student_exam_${exam.id || idx}`} className="p-3.5 bg-[#f8f9fa] rounded-lg border border-[#dadce0] flex items-center justify-between">
                                         <div>
                                             <div className="font-medium text-[13px] text-[#202124]">{exam.title}</div>
                                             <div className="text-[11px] text-[#5f6368] font-normal">{exam.date || 'ללא תאריך'}</div>
@@ -245,50 +258,40 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
                     </div>
                 </div>
 
-                {/* Notes Feed Section */}
+                {/* Personal File / Notes Section */}
                 {isStaff && (
                     <div className="mb-6">
-                        <h3 className="text-[16px] font-medium text-[#202124] flex items-center gap-2 mb-3">
-                            <MessageSquare size={18} className="text-[#1a73e8]" />
-                            הערות מעקב צוות
-                        </h3>
-
-                        {/* Notes Feed List */}
-                        <div className="space-y-2 mb-4 max-h-40 overflow-y-auto">
-                            {studentNotes.length === 0 ? (
-                                <div className="text-[12px] text-[#5f6368] italic">אין הערות מעקב רשומות</div>
-                            ) : (
-                                studentNotes.map((n: any) => (
-                                    <div key={n.id} className="p-3 bg-[#f8f9fa] rounded-lg border border-[#dadce0] text-[13px]">
-                                        <div className="flex items-center justify-between font-medium text-[#3c4043] mb-1">
-                                            <span>{n.author}</span>
-                                            <span className="text-[11px] text-[#5f6368]">
-                                                {n.createdAt ? new Date(n.createdAt).toLocaleDateString('he-IL') : ''}
-                                            </span>
-                                        </div>
-                                        <p className="text-[#202124] font-normal">{n.text}</p>
-                                    </div>
-                                ))
+                        <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-[16px] font-medium text-[#202124] flex items-center gap-2">
+                                <BookOpen size={18} className="text-[#1a73e8]" />
+                                תיק אישי - מעקב מדריך וצוות
+                            </h3>
+                            {noteData?.updatedAt && (
+                                <span className="text-[11px] text-[#5f6368] font-normal">
+                                    עודכן {new Date(noteData.updatedAt).toLocaleDateString('he-IL')} {noteData.author ? `על ידי ${noteData.author}` : ''}
+                                </span>
                             )}
                         </div>
-
-                        {/* Add Note Form */}
-                        <form onSubmit={handleAddNote} className="flex gap-2">
-                            <input
-                                type="text"
-                                placeholder="הוסף הערת מעקב חדשה..."
-                                value={newNote}
-                                onChange={(e) => setNewNote(e.target.value)}
-                                className="flex-1 h-10 px-3 border border-[#dadce0] rounded text-[13px] bg-white text-[#202124] focus:border-[#1a73e8] outline-none"
-                            />
+                        <p className="text-[13px] font-normal text-[#5f6368] mb-3 leading-relaxed">
+                            כאן מתועדות כל הערות המעקב, נקודות לשימור ולשיפור של החניך לאורך הקורס (שדה תיק אישי יחיד ומשותף).
+                        </p>
+                        <textarea
+                            className="w-full p-4 border border-[#dadce0] rounded-xl bg-white min-h-[160px] focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8] outline-none transition-all font-normal text-[#202124] text-right leading-relaxed resize-y text-[14px]"
+                            placeholder="כתוב כאן על ההתקדמות, התפקוד והמעקב של החניך..."
+                            value={personalNote}
+                            onChange={(e) => setPersonalNote(e.target.value)}
+                        />
+                        <div className="flex justify-end mt-2.5">
                             <button
-                                type="submit"
-                                disabled={!newNote.trim()}
-                                className="h-10 px-5 bg-[#1a73e8] hover:bg-[#1967d2] text-white rounded-full text-[13px] font-medium disabled:opacity-50 transition-all"
+                                type="button"
+                                onClick={handleSavePersonalNote}
+                                disabled={isSavingNote}
+                                className="h-10 px-6 bg-[#1a73e8] hover:bg-[#1967d2] text-white rounded-full text-[13px] font-medium transition-all flex items-center gap-2 disabled:opacity-50"
                             >
-                                הוסף
+                                <BookOpen size={16} />
+                                {isSavingNote ? 'שומר...' : 'שמור תיק אישי'}
                             </button>
-                        </form>
+                        </div>
                     </div>
                 )}
 
@@ -301,15 +304,12 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
                     <div className="flex flex-wrap gap-2">
                         {(eventsList || [])
                             .filter((e: any) => e.type !== 'יום חשיפה')
-                            .map((ev: any) => {
-                                const st = studentAtt[ev.id];
-                                const isPresent = st === true;
-                                const isMissing = st === 'missing' || st === 'חסר';
-                                const isAbsent = st === false;
+                            .map((ev: any, idx: number) => {
+                                const isPresent = !!studentAtt[ev.id];
                                 return (
                                     <span
-                                        key={ev.id}
-                                        className={`px-3 py-1 rounded-full text-[12px] font-medium border flex items-center gap-1.5 ${
+                                        key={`student_att_${ev.id || idx}`}
+                                        className={`px-3 py-1 rounded-full text-[12px] font-medium border ${
                                             isPresent
                                                 ? 'bg-white text-[#188038] border-[#188038]/40'
                                                 : isMissing

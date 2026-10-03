@@ -41,7 +41,7 @@ export default function StudentView({ profile, exams, grades, attendance, events
         const g = grades[`${profile?.id}_${selectedExam.id}`];
         const total = g ? Object.values(g?.scores || {}).reduce((a, b) => (parseInt(a) || 0) + (parseInt(b) || 0), 0) : null;
         return (
-            <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full font-sans pb-20 text-right text-[#202124]" dir="rtl">
+            <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto w-full font-sans pb-20 text-right text-[#202124]" dir="rtl">
                 <button onClick={() => handleSelectExam(null)} className="mb-6 flex items-center text-[#1a73e8] font-medium hover:underline gap-1 text-[14px]">
                     <ChevronLeft size={18} /> חזרה
                 </button>
@@ -85,7 +85,7 @@ export default function StudentView({ profile, exams, grades, attendance, events
     }
 
     return (
-        <div className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full font-sans pb-24 sm:pb-10 text-right text-[#202124]" dir="rtl">
+        <div className="p-3 sm:p-6 lg:p-8 max-w-[1600px] mx-auto w-full font-sans pb-10 text-right text-[#202124]" dir="rtl">
             <header className="bg-white p-4 sm:p-6 rounded-[24px] border border-[#dadce0] mb-4 sm:mb-6">
                 <div className="flex justify-between items-start">
                     <div className="flex items-center gap-3">

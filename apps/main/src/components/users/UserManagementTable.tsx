@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Filter, Trash2, Edit2, UserPlus, FileText, Download, Eye } from 'lucide-react';
+import { Search, Filter, Trash2, Edit2, UserPlus, FileText, Download, Eye, AlertTriangle } from 'lucide-react';
 import { UserProfile, UserRole } from '@/types/user';
 import { TAGS_CATALOG, getTagColorClasses, getUserAvatar, SCHOOL_LIST } from '@/config/constants';
 
@@ -28,6 +28,7 @@ export const UserManagementTable: React.FC<UserManagementTableProps> = ({
     const [selectedSchoolFilter, setSelectedSchoolFilter] = useState('');
     const [selectedRoleFilter, setSelectedRoleFilter] = useState('');
     const [selectedTagFilter, setSelectedTagFilter] = useState('');
+    const [userPendingDelete, setUserPendingDelete] = useState<UserProfile | null>(null);
 
     const isAdmin = currentRole === 'admin' || currentRole === 'inspector';
 
@@ -223,9 +224,10 @@ export const UserManagementTable: React.FC<UserManagementTableProps> = ({
                                         )}
                                         {isAdmin && onDeleteUser && (
                                             <button
-                                                onClick={() => onDeleteUser(u.id || u.phone || '')}
+                                                onClick={() => setUserPendingDelete(u)}
                                                 className="p-1.5 hover:bg-[#fce8e6] text-[#d93025] rounded-full transition-colors"
                                                 title="מחק משתמש"
+                                                aria-label={`מחק את המשתמש ${u.name || u.fullName}`}
                                             >
                                                 <Trash2 size={16} />
                                             </button>
@@ -237,6 +239,53 @@ export const UserManagementTable: React.FC<UserManagementTableProps> = ({
                     )}
                 </div>
             </div>
+
+            {/* Deletion Confirmation Modal */}
+            {userPendingDelete && (
+                <div
+                    role="alertdialog"
+                    aria-modal="true"
+                    aria-labelledby="delete-dialog-title"
+                    aria-describedby="delete-dialog-desc"
+                    className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-[#202124]/50 backdrop-blur-xs"
+                    dir="rtl"
+                >
+                    <div className="bg-white rounded-[24px] border border-[#dadce0] w-full max-w-md p-6 text-right shadow-xl">
+                        <div className="w-12 h-12 rounded-full bg-[#fce8e6] text-[#d93025] flex items-center justify-center mb-4">
+                            <AlertTriangle size={24} />
+                        </div>
+                        <h3 id="delete-dialog-title" className="text-[18px] font-medium text-[#202124] mb-2">
+                            מחיקת משתמש לצמיתות
+                        </h3>
+                        <p id="delete-dialog-desc" className="text-[14px] text-[#5f6368] font-normal leading-relaxed mb-6">
+                            האם אתה בטוח שברצונך למחוק את <strong className="text-[#202124]">{userPendingDelete.name || userPendingDelete.fullName}</strong>? פעולה זו בלתי הפיכה ותמחק את פרטי המשתמש, ציוניו ונוכחותו מהמערכת.
+                        </p>
+                        <div className="flex items-center justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setUserPendingDelete(null)}
+                                className="h-10 px-5 rounded-full border border-[#dadce0] text-[#3c4043] font-medium text-[13px] hover:bg-[#f8f9fa] transition-colors"
+                            >
+                                ביטול
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const idToDelete = userPendingDelete.id || userPendingDelete.phone || '';
+                                    setUserPendingDelete(null);
+                                    if (onDeleteUser && idToDelete) {
+                                        onDeleteUser(idToDelete);
+                                    }
+                                }}
+                                className="h-10 px-5 rounded-full bg-[#d93025] hover:bg-[#b31412] text-white font-medium text-[13px] transition-colors flex items-center gap-1.5"
+                            >
+                                <Trash2 size={15} />
+                                אישור ומחיקה
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

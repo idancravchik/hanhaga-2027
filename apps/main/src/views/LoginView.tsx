@@ -92,7 +92,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ usersList, siteSettings, s
 
     return (
         <div className="flex flex-col items-center justify-center min-h-screen p-3 sm:p-6 bg-transparent" dir="rtl">
-            <div className="bg-white p-5 sm:p-10 rounded-[24px] border border-[#dadce0] w-full max-w-md text-right relative transition-all">
+            <div className="bg-white p-5 sm:p-10 rounded-[24px] border border-[#dadce0] w-full max-w-md text-right relative transition-all shadow-sm">
                 <div id="recaptcha-container"></div>
 
                 {/* Logo & Title */}

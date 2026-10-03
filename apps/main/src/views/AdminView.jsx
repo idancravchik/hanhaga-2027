@@ -19,10 +19,9 @@ import { MobileBottomNav } from '../components/navigation/MobileBottomNav';
 
 export default function AdminView({ profile, usersList, exams, grades, attendance, notes, eventsList = [], deleteUser, setView, showToast, showAlert, siteSettings }) {
     const [adminSubView, setAdminSubViewInternal] = useState('reports');
-    const [selectedStudentCard, setSelectedStudentCardInternal] = useState(null);
+    const [selectedStudentProfile, setSelectedStudentProfile] = useState(null);
     const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
     const [userToEdit, setUserToEdit] = useState(null);
-    const [selectedStudentProfile, setSelectedStudentProfile] = useState(null);
     const [isExamModalOpen, setIsExamModalOpen] = useState(false);
     const [examToEdit, setExamToEdit] = useState(null);
     const [gradeModalExam, setGradeModalExam] = useState(null);
@@ -36,18 +35,18 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
         const newState = {
             view: profile?.role === 'admin' || profile?.role === 'inspector' ? profile.role : 'login',
             adminSubView: newSubView,
-            selectedStudentCard: studentId
+            selectedStudentId: studentId
         };
         window.history.pushState(newState, '', '');
     };
 
     const setAdminSubView = (v, push = true) => {
         setAdminSubViewInternal(v);
-        if (push) handlePushState(v, selectedStudentCard?.id || null);
+        if (push) handlePushState(v, selectedStudentProfile?.id || null);
     };
 
-    const setSelectedStudentCard = (student, push = true) => {
-        setSelectedStudentCardInternal(student);
+    const handleSelectStudentProfile = (student, push = true) => {
+        setSelectedStudentProfile(student);
         if (push) handlePushState(adminSubView, student?.id || null);
     };
 
@@ -55,8 +54,8 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
         const handlePopState = (event) => {
             if (event.state && (event.state.view === 'admin' || event.state.view === 'inspector')) {
                 setAdminSubViewInternal(event.state.adminSubView || 'reports');
-                const student = usersList.find(u => u.id === event.state.selectedStudentCard);
-                setSelectedStudentCardInternal(student || null);
+                const student = usersList.find(u => u.id === event.state.selectedStudentId || u.id === event.state.selectedStudentCard);
+                setSelectedStudentProfile(student || null);
             }
         };
         window.addEventListener('popstate', handlePopState);
@@ -160,6 +159,8 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
         showToast('הדוח יוצא בהצלחה!');
     };
 
+    return (
+        <div className="p-3 sm:p-6 lg:p-8 max-w-[1600px] mx-auto w-full space-y-4 sm:space-y-6 text-right text-[#202124] font-sans" dir="rtl">
     if (selectedStudentCard) {
         const studentAtt = attendance[selectedStudentCard.id] || {};
         const studentNote = notes[selectedStudentCard.id]?.content || '';
@@ -320,7 +321,7 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
 
             {/* SubView Contents */}
             {adminSubView === 'events' && (
-                <div className="space-y-4 sm:space-y-6 max-w-4xl mx-auto" dir="rtl">
+                <div className="space-y-4 sm:space-y-6 w-full" dir="rtl">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-6 rounded-[24px] border border-[#dadce0]">
                         <div>
                             <h3 className="text-[18px] sm:text-[20px] font-medium text-[#202124]">לוח אירועים ומפגשים ({eventsList.length})</h3>

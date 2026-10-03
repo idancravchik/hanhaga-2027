@@ -33,3 +33,8 @@ Thumbs.db
 # Worktrees
 .worktrees/
 
+# Accessibility and UI audit scripts & reports
+apps/main/scripts/comprehensive-audit-v2.mjs
+apps/main/scripts/verify-fixes.mjs
+.audit-results/
+
