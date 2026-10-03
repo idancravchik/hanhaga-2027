@@ -9,4 +9,5 @@ export interface CourseEvent {
     description?: string;
 }
 
-export type AttendanceMap = Record<string, Record<string, boolean>>;
+export type AttendanceStatus = boolean | 'missing' | 'חסר';
+export type AttendanceMap = Record<string, Record<string, AttendanceStatus | undefined>>;

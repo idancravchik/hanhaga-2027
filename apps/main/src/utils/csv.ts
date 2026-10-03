@@ -22,7 +22,28 @@ export const parseUsersCSV = (fileText: string): CSVImportResult => {
             return;
         }
 
-        const parts = trimmed.split(',').map((s) => s.trim().replace(/^["']|["']$/g, ''));
+        // Robust RFC-4180 parsing for quoted commas and escaped quotes
+        const parts: string[] = [];
+        let current = '';
+        let inQuotes = false;
+        for (let i = 0; i < trimmed.length; i++) {
+            const char = trimmed[i];
+            if (char === '"') {
+                if (inQuotes && trimmed[i + 1] === '"') {
+                    current += '"';
+                    i++;
+                } else {
+                    inQuotes = !inQuotes;
+                }
+            } else if (char === ',' && !inQuotes) {
+                parts.push(current.trim().replace(/^["']|["']$/g, ''));
+                current = '';
+            } else {
+                current += char;
+            }
+        }
+        parts.push(current.trim().replace(/^["']|["']$/g, ''));
+
         const [name, phone, school, groupStr, roleStr] = parts;
 
         const normName = normalizeName(name);
@@ -58,8 +79,8 @@ export const parseUsersCSV = (fileText: string): CSVImportResult => {
 const sanitizeCSVField = (val: any): string => {
     if (val === null || val === undefined) return '""';
     let str = String(val).replace(/"/g, '""');
-    // Prevent CSV/Excel formula injection
-    if (/^[=+\-@]/.test(str)) {
+    // Prevent CSV/Excel formula injection (DDE) including tabs, returns, pipes, plus, minus, equals, at
+    if (/^[=+\-@\t\r\|]/.test(str) || /^[\s]+[=+\-@\t\r\|]/.test(str)) {
         str = `'${str}`;
     }
     return `"${str}"`;
@@ -91,7 +112,13 @@ export const exportUsersToCSV = (
             sanitizeCSVField(student.name || student.fullName || ''),
             sanitizeCSVField(student.school || ''),
             sanitizeCSVField(student.group || 0),
-            ...validEvents.map((ev) => (att[ev.id] ? '"נכח"' : '"נעדר"')),
+            ...validEvents.map((ev) => {
+                const s = att[ev.id];
+                if (s === true) return '"נכח"';
+                if (s === 'missing' || s === 'חסר') return '"חסר"';
+                if (s === false) return '"נעדר"';
+                return '"לא דווח"';
+            }),
         ];
 
         exams.forEach((exam) => {

@@ -1,11 +1,13 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronLeft, UserCircle } from 'lucide-react';
+import { ChevronLeft, UserCircle, Calendar, GraduationCap, Layers } from 'lucide-react';
 import { LOGO_URL, getUserAvatar, TAGS_CATALOG, getTagColorClasses } from '../config/constants';
 import { StudentGradesView } from '../components/exams/StudentGradesView';
 import { StudentScheduleView } from '../components/events/StudentScheduleView';
+import { MobileBottomNav } from '../components/navigation/MobileBottomNav';
 
 export default function StudentView({ profile, exams, grades, attendance, eventsList, setView }) {
     const [selectedExam, setSelectedExamInternal] = useState(null);
+    const [mobileTab, setMobileTab] = useState('all');
 
     React.useEffect(() => {
         const handlePopState = (event) => {
@@ -37,7 +39,7 @@ export default function StudentView({ profile, exams, grades, attendance, events
 
     if (selectedExam) {
         const g = grades[`${profile?.id}_${selectedExam.id}`];
-        const total = g ? Object.values(g.scores).reduce((a, b) => (parseInt(a) || 0) + (parseInt(b) || 0), 0) : null;
+        const total = g ? Object.values(g?.scores || {}).reduce((a, b) => (parseInt(a) || 0) + (parseInt(b) || 0), 0) : null;
         return (
             <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto w-full font-sans pb-20 text-right text-[#202124]" dir="rtl">
                 <button onClick={() => handleSelectExam(null)} className="mb-6 flex items-center text-[#1a73e8] font-medium hover:underline gap-1 text-[14px]">
@@ -51,7 +53,7 @@ export default function StudentView({ profile, exams, grades, attendance, events
                         ) : (
                             <div className="text-[72px] font-medium text-[#1a73e8] leading-none mb-1 tabular-nums">{total !== null ? total : '--'}</div>
                         )}
-                        <p className="text-[12px] font-normal text-[#5f6368]">{!selectedExam.isStudentVisible && selectedExam.showVerbalOnly ? 'מדריך' : 'ציון סופי'}</p>
+                        <p className="text-[12px] font-medium text-[#3c4043]">{!selectedExam.isStudentVisible && selectedExam.showVerbalOnly ? 'מדריך' : 'ציון סופי'}</p>
                     </div>
                     <div className="p-6 space-y-5 bg-white">
                         {g ? (
@@ -62,9 +64,9 @@ export default function StudentView({ profile, exams, grades, attendance, events
                                             <div key={i} className="flex justify-between items-center p-4 bg-[#f8f9fa] rounded-lg border border-[#dadce0]">
                                                 <span className="font-medium text-[#3c4043] text-[14px]">{cat.name}</span>
                                                 <div className="font-medium tabular-nums text-[14px]">
-                                                    <span className="text-[#1a73e8] text-xl font-medium">{g.scores[cat.name] || 0}</span>
-                                                    <span className="text-[#5f6368] text-sm mx-1">/</span>
-                                                    <span className="text-[#5f6368]">{cat.maxScore ?? cat.max ?? 100}</span>
+                                                    <span className="text-[#1a73e8] text-xl font-medium">{g?.scores?.[cat.name] || 0}</span>
+                                                    <span className="text-[#3c4043] text-sm mx-1">/</span>
+                                                    <span className="text-[#3c4043]">{cat.maxScore ?? cat.max ?? 100}</span>
                                                 </div>
                                             </div>
                                         ))}
@@ -75,7 +77,7 @@ export default function StudentView({ profile, exams, grades, attendance, events
                                     <p className="bg-[#f8f9fa] p-5 rounded-[16px] border border-[#dadce0] text-[#3c4043] leading-relaxed font-normal text-[15px]">"{g.comment || "ביצוע טוב מאוד!"}"</p>
                                 </div>
                             </>
-                        ) : <div className="text-center py-16 italic text-[#5f6368] font-normal">הציון עדיין בעיבוד...</div>}
+                        ) : <div className="text-center py-16 italic text-[#3c4043] font-normal">הציון עדיין בעיבוד...</div>}
                     </div>
                 </div>
             </div>
@@ -113,20 +115,33 @@ export default function StudentView({ profile, exams, grades, attendance, events
                 </div>
             </header>
 
-            <div className="mb-6">
-                <StudentScheduleView
-                    events={eventsList}
-                    attendance={attendance}
-                    studentId={profile?.id || profile?.phone || ''}
-                />
-            </div>
+            {(mobileTab === 'all' || mobileTab === 'schedule') && (
+                <div className="mb-6">
+                    <StudentScheduleView
+                        events={eventsList}
+                        attendance={attendance}
+                        studentId={profile?.id || profile?.phone || ''}
+                    />
+                </div>
+            )}
 
-            <StudentGradesView
-                exams={exams.filter(e => e.isStudentVisible)}
-                grades={grades}
-                studentId={profile?.id || profile?.phone || ''}
-                studentPhone={profile?.phone}
-                studentFirestoreId={profile?.firestoreId}
+            {(mobileTab === 'all' || mobileTab === 'grades') && (
+                <StudentGradesView
+                    exams={exams.filter(e => e.isStudentVisible)}
+                    grades={grades}
+                    studentId={profile?.id || profile?.phone || ''}
+                    studentPhone={profile?.phone}
+                    studentFirestoreId={profile?.firestoreId}
+                />
+            )}
+
+            <MobileBottomNav
+                ariaLabel="ניווט חניך למובייל"
+                items={[
+                    { id: 'all', label: 'הכל', icon: Layers, onClick: () => setMobileTab('all'), active: mobileTab === 'all' },
+                    { id: 'schedule', label: 'לוח זמנים', icon: Calendar, onClick: () => setMobileTab('schedule'), active: mobileTab === 'schedule' },
+                    { id: 'grades', label: 'ציונים', icon: GraduationCap, onClick: () => setMobileTab('grades'), active: mobileTab === 'grades' },
+                ]}
             />
         </div>
     );

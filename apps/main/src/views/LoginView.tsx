@@ -51,7 +51,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ usersList, siteSettings, s
 
         if (staffMode === 'passcode') {
             setLoading(true);
-            const res = await loginStaffWithStaticPasscode(name, phone, passcode, usersList);
+            const res = await loginStaffWithStaticPasscode(name.trim(), phone.trim(), passcode.trim(), usersList);
             setLoading(false);
             if (res.success) {
                 showToast('התחברת בהצלחה כאיש צוות!', 'success');

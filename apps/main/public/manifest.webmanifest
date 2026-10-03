@@ -1,7 +1,7 @@
 {
-  "name": "קורס הנהגה תשפ\"ז",
-  "short_name": "הנהגה 2027",
-  "description": "פורטל קורס הנהגה תשפ\"ז",
+  "name": "קורס הנהגה",
+  "short_name": "הנהגה",
+  "description": "פורטל קורס הנהגה",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

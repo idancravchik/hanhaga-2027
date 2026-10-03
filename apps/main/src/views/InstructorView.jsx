@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronLeft, Search, Calendar, UserCircle, BookOpen, AlertCircle, Check, X, ChevronDown, ChevronUp, Eye } from 'lucide-react';
+import { ChevronLeft, Search, Calendar, UserCircle, BookOpen, AlertCircle, Check, X, ChevronDown, ChevronUp, Eye, Users, CalendarCheck } from 'lucide-react';
 import { LOGO_URL, getUserAvatar, TAGS_CATALOG, getTagColorClasses } from '../config/constants';
 import { doc, setDoc } from 'firebase/firestore';
 import { signInAnonymously } from 'firebase/auth';
 import { db, auth, appId } from '../config/firebase';
 import { StudentProfileModal } from '../components/users/StudentProfileModal';
 import { AttendanceReportTable } from '../components/events/AttendanceReportTable';
+import { MobileBottomNav } from '../components/navigation/MobileBottomNav';
 
 export default function InstructorView({ profile, usersList, exams, grades, attendance, notes, eventsList, setView, showToast, isMixedAssessment = false }) {
     const [instructorSubView, setInstructorSubViewInternal] = useState('students');
@@ -238,7 +239,7 @@ export default function InstructorView({ profile, usersList, exams, grades, atte
             </header>
 
             {profile?.role !== 'assistant' && (
-                <div className="flex bg-white rounded-full p-1 border border-[#dadce0] mb-4 sm:mb-6 gap-1 overflow-x-auto no-scrollbar shrink-0">
+                <div className="hidden sm:flex bg-white rounded-full p-1 border border-[#dadce0] mb-4 sm:mb-6 gap-1 overflow-x-auto no-scrollbar shrink-0">
                     <button onClick={() => setInstructorSubView('students')} className={`flex-1 min-w-[110px] py-2 rounded-full font-medium text-[13px] sm:text-[14px] transition-all ${instructorSubView === 'students' ? 'bg-[#1a73e8] text-white' : 'text-[#5f6368] hover:text-[#202124]'}`}>כרטיסי חניכים</button>
                     <button onClick={() => setInstructorSubView('meetings')} className={`flex-1 min-w-[110px] py-2 rounded-full font-medium text-[13px] sm:text-[14px] transition-all ${instructorSubView === 'meetings' ? 'bg-[#1a73e8] text-white' : 'text-[#5f6368] hover:text-[#202124]'}`}>נוכחות במפגשים</button>
                 </div>
@@ -403,6 +404,16 @@ export default function InstructorView({ profile, usersList, exams, grades, atte
                     notes={notes}
                     eventsList={eventsList}
                     showToast={showToast}
+                />
+            )}
+
+            {profile?.role !== 'assistant' && (
+                <MobileBottomNav
+                    ariaLabel="ניווט מדריך למובייל"
+                    items={[
+                        { id: 'students', label: 'חניכים', icon: Users, onClick: () => setInstructorSubView('students'), active: instructorSubView === 'students' },
+                        { id: 'meetings', label: 'מפגשים', icon: CalendarCheck, onClick: () => setInstructorSubView('meetings'), active: instructorSubView === 'meetings' },
+                    ]}
                 />
             )}
         </div>

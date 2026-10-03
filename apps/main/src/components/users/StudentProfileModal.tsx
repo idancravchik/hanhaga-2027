@@ -312,10 +312,15 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
                                         className={`px-3 py-1 rounded-full text-[12px] font-medium border ${
                                             isPresent
                                                 ? 'bg-white text-[#188038] border-[#188038]/40'
-                                                : 'bg-white text-[#d93025] border-[#d93025]/40'
+                                                : isMissing
+                                                ? 'bg-[#fef7e0] text-[#b06000] border-[#feefc3]'
+                                                : isAbsent
+                                                ? 'bg-white text-[#d93025] border-[#d93025]/40'
+                                                : 'bg-[#f8f9fa] text-[#5f6368] border-[#dadce0]'
                                         }`}
                                     >
-                                        {ev.title}: {isPresent ? 'נכח' : 'נעדר'}
+                                        {isMissing && <div className="w-2 h-2 rounded-full bg-[#f9ab00]" />}
+                                        {ev.title}: {isPresent ? 'נכח' : isMissing ? 'חסר' : isAbsent ? 'נעדר' : 'לא דווח'}
                                     </span>
                                 );
                             })}

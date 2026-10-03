@@ -79,9 +79,21 @@ const AppContent: React.FC = () => {
         const unsubExams = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'exams'), (s) =>
             setExams(s.docs.map((d) => ({ id: d.id, ...d.data() })))
         );
-        const unsubUsers = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), (s) =>
-            setUsersList(s.docs.map((d) => ({ id: d.id, phone: d.id, firestoreId: d.id, ...d.data() } as unknown as UserProfile)))
-        );
+
+        // SEC-02: Isolate user list to staff only. Students never receive the full roster.
+        let unsubUsers = () => {};
+        if (profile && profile.role !== 'student') {
+            unsubUsers = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), (s) =>
+                setUsersList(s.docs.map((d) => ({ id: d.id, phone: d.id, firestoreId: d.id, ...d.data() } as unknown as UserProfile)))
+            );
+        } else if (profile && profile.role === 'student' && profile.id) {
+            unsubUsers = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'users', profile.id), (d) => {
+                if (d.exists()) {
+                    setUsersList([{ id: d.id, phone: d.id, firestoreId: d.id, ...d.data() } as unknown as UserProfile]);
+                }
+            });
+        }
+
         const unsubSettings = onSnapshot(doc(db, 'artifacts', appId, 'public', 'config'), (d) => {
             if (d.exists()) setSiteSettings(d.data());
         });
@@ -117,7 +129,7 @@ const AppContent: React.FC = () => {
             unsubSettings();
             unsubEvents();
         };
-    }, [user]);
+    }, [user, profile]);
 
     // Auto-persist admin profile to Firestore if not already present
     useEffect(() => {

@@ -100,10 +100,10 @@ export const StudentScheduleView: React.FC<StudentScheduleViewProps> = ({ events
                         const isPast = evDate ? evDate < now : false;
 
                         return (
-                            <div key={ev.id} className={`p-4 flex items-center justify-between gap-3 hover:bg-[#f8f9fa] transition-colors ${isPast ? 'opacity-85' : ''}`}>
+                            <div key={ev.id} className="p-4 flex items-center justify-between gap-3 hover:bg-[#f8f9fa] transition-colors">
                                 <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-2 mb-1">
-                                        <span className="text-[12px] font-normal text-[#5f6368]" dir="ltr">
+                                        <span className="text-[12px] font-medium text-[#3c4043]" dir="ltr">
                                             {evDate ? evDate.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' }) : ''}
                                         </span>
                                         <span className="text-[12px] font-normal px-2.5 py-0.5 rounded-full bg-[#f8f9fa] border border-[#dadce0] text-[#3c4043]">
@@ -111,15 +111,17 @@ export const StudentScheduleView: React.FC<StudentScheduleViewProps> = ({ events
                                         </span>
                                     </div>
                                     <h4 className="font-medium text-[15px] text-[#202124] truncate">{ev.title}</h4>
-                                    {ev.location && <p className="text-[12px] text-[#5f6368] font-normal truncate">{ev.location}</p>}
+                                    {ev.location && <p className="text-[12px] text-[#3c4043] font-normal truncate">{ev.location}</p>}
                                 </div>
 
                                 <div>
                                     {tracksAttendance ? (
                                         <div
-                                            className={`px-3 py-1 rounded-full text-[12px] font-medium border flex items-center gap-1 ${
+                                            className={`px-3 py-1 rounded-full text-[12px] font-medium border flex items-center gap-1.5 ${
                                                 status === true
                                                     ? 'bg-white text-[#188038] border-[#188038]/40'
+                                                    : status === 'missing' || status === 'חסר'
+                                                    ? 'bg-[#fef7e0] text-[#b06000] border-[#feefc3]'
                                                     : status === false
                                                     ? 'bg-white text-[#d93025] border-[#d93025]/40'
                                                     : 'bg-[#f8f9fa] text-[#5f6368] border-[#dadce0]'
@@ -129,6 +131,12 @@ export const StudentScheduleView: React.FC<StudentScheduleViewProps> = ({ events
                                                 <>
                                                     <span>נכח</span>
                                                     <Check size={14} />
+                                                </>
+                                            )}
+                                            {(status === 'missing' || status === 'חסר') && (
+                                                <>
+                                                    <div className="w-2 h-2 rounded-full bg-[#f9ab00]" />
+                                                    <span>חסר</span>
                                                 </>
                                             )}
                                             {status === false && (

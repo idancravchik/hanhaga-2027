@@ -15,6 +15,7 @@ import { ExamBuilderModal } from '../components/exams/ExamBuilderModal';
 import { GradeEntryModal } from '../components/exams/GradeEntryModal';
 import { EventBuilderModal } from '../components/events/EventBuilderModal';
 import { AttendanceReportTable } from '../components/events/AttendanceReportTable';
+import { MobileBottomNav } from '../components/navigation/MobileBottomNav';
 
 export default function AdminView({ profile, usersList, exams, grades, attendance, notes, eventsList = [], deleteUser, setView, showToast, showAlert, siteSettings }) {
     const [adminSubView, setAdminSubViewInternal] = useState('reports');
@@ -160,6 +161,118 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
 
     return (
         <div className="p-3 sm:p-6 lg:p-8 max-w-[1600px] mx-auto w-full space-y-4 sm:space-y-6 text-right text-[#202124] font-sans" dir="rtl">
+    if (selectedStudentCard) {
+        const studentAtt = attendance[selectedStudentCard.id] || {};
+        const studentNote = notes[selectedStudentCard.id]?.content || '';
+        const studentTags = selectedStudentCard.tags || [];
+
+        return (
+            <div className="fixed inset-0 z-50 bg-[#202124]/50 flex items-center justify-center p-4">
+                <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-[24px] border border-[#dadce0] flex flex-col overflow-hidden text-right" dir="rtl">
+                    <header className="p-6 border-b border-[#dadce0] bg-[#f8f9fa] flex justify-between items-start shrink-0 text-right" dir="rtl">
+                        <div>
+                            <h2 className="text-[24px] font-medium text-[#202124] mb-2">{selectedStudentCard.name}</h2>
+                            <div className="flex gap-2 text-[13px] font-normal text-[#5f6368] flex-wrap">
+                                <span className="bg-white px-3 py-0.5 rounded-full border border-[#dadce0] text-[#3c4043]">מחלקה {selectedStudentCard.group}</span>
+                                <span className="bg-white px-3 py-0.5 rounded-full border border-[#dadce0] text-[#3c4043]">{selectedStudentCard.school}</span>
+                                <span className="bg-white px-3 py-0.5 rounded-full border border-[#dadce0] text-[#3c4043]" dir="ltr">{selectedStudentCard.phone}</span>
+                            </div>
+                            
+                            {studentTags.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5 mt-3">
+                                    {studentTags.map((tag, idx) => {
+                                        const tagDef = TAGS_CATALOG.find(t => t.id === tag.id);
+                                        const badgeClass = getTagColorClasses(tagDef?.color);
+                                        return (
+                                            <span key={idx} className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${badgeClass}`}>
+                                                {tag.label}{tag.detail ? `: ${tag.detail}` : ''}
+                                            </span>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                        <button onClick={() => setSelectedStudentCard(null)} className="p-2 bg-[#f1f3f4] hover:bg-[#e8eaed] text-[#3c4043] rounded-full transition-colors">
+                            <X size={20} />
+                        </button>
+                    </header>
+
+                    <div className="p-6 overflow-y-auto space-y-6 flex-1 text-right" dir="rtl">
+                        {/* Notes Section */}
+                        <section className="bg-[#e8f0fe] p-5 rounded-[24px] border border-[#dadce0]">
+                            <div className="flex items-center gap-2 mb-3 text-[#1a73e8]">
+                                <BookOpen size={18} />
+                                <h3 className="font-medium text-[16px] text-[#202124]">מעקב מדריך (תיק אישי)</h3>
+                            </div>
+                            {studentNote ? (
+                                <p className="font-normal text-[#3c4043] text-[14px] whitespace-pre-wrap leading-relaxed">{studentNote}</p>
+                            ) : (
+                                <p className="text-[#5f6368] text-[13px] font-normal italic">לא נרשמו הערות בתיק האישי.</p>
+                            )}
+                        </section>
+
+                        {/* Attendance Section */}
+                        <section>
+                            <h3 className="font-medium text-[#202124] text-[16px] mb-3 flex items-center gap-2"><Check size={18} className="text-[#188038]" /> נוכחות הכנות</h3>
+                            <div className="flex flex-wrap gap-2">
+                                {attendanceEvents.map(ev => {
+                                    const status = studentAtt[ev.id];
+                                    let badgeStyle = 'bg-[#f8f9fa] text-[#3c4043] border-[#dadce0]';
+                                    if (status === true) badgeStyle = 'bg-[#188038] text-white border-[#188038]';
+                                    if (status === false) badgeStyle = 'bg-[#d93025] text-white border-[#d93025]';
+                                    return (
+                                        <div key={ev.id} className={`px-3 py-1 rounded-full flex items-center gap-1.5 text-[12px] font-medium border ${badgeStyle}`}>
+                                            {ev.title} {status === true && <Check size={14} />}
+                                            {status === false && <X size={14} />}
+                                            {status === undefined && <span className="text-[10px] opacity-75">-</span>}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </section>
+
+                        {/* Grades Section */}
+                        <section>
+                            <h3 className="font-medium text-[#202124] text-[16px] mb-3 flex items-center gap-2"><GraduationCap size={18} className="text-[#1a73e8]" /> פירוט מבחנים</h3>
+                            <div className="space-y-4">
+                                {exams.map(exam => {
+                                    const g = grades[`${selectedStudentCard.id}_${exam.id}`];
+                                    if (!g) return null;
+                                    const total = Object.values(g?.scores || {}).reduce((a, b) => (parseInt(a) || 0) + (parseInt(b) || 0), 0);
+
+                                    return (
+                                        <div key={exam.id} className="p-5 border border-[#dadce0] rounded-[24px] bg-white">
+                                            <div className="flex justify-between items-center mb-3">
+                                                <h4 className="font-medium text-[16px] text-[#202124]">{exam.title}</h4>
+                                                <span className="text-[20px] font-medium text-[#1a73e8] tabular-nums">{total} נק'</span>
+                                            </div>
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mb-3">
+                                                {exam.categories.map((cat, i) => (
+                                                    <div key={i} className="bg-[#f8f9fa] p-3 rounded-lg border border-[#dadce0] flex justify-between items-center">
+                                                        <span className="font-medium text-[#3c4043] text-[12px]">{cat.name}</span>
+                                                        <span className="font-medium text-[#202124] text-[13px] tabular-nums">{g?.scores?.[cat.name] || 0} / {cat.maxScore ?? cat.max ?? 100}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            {g.comment && (
+                                                <div className="bg-[#f8f9fa] p-3.5 rounded-lg border border-[#dadce0] mt-2">
+                                                    <span className="text-[12px] font-medium text-[#3c4043] block mb-1">הערת מעריך:</span>
+                                                    <p className="font-normal text-[#3c4043] text-[13px] leading-relaxed">"{g.comment}"</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-4 sm:space-y-6 pb-24 sm:pb-8 text-right text-[#202124] font-sans" dir="rtl">
             <header className="bg-white p-4 sm:p-6 rounded-[24px] border border-[#dadce0] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex items-center gap-3">
                     <img src={LOGO_URL} className="w-9 h-9 sm:w-10 sm:h-10 object-contain" alt="Logo" />
@@ -174,7 +287,7 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
                                     await setDoc(doc(db, 'artifacts', appId, 'public', 'config'), { staffLoginMethod: nextMethod }, { merge: true });
                                     showToast(nextMethod === 'otp' ? "מצב כניסת צוות שונה ל-SMS (OTP)" : "מצב כניסת צוות שונה לקוד גישה סטטי");
                                 }}
-                                className="h-9 px-3 rounded-full transition-colors bg-[#f8f9fa] text-[#1a73e8] border border-[#dadce0] hover:bg-[#e8f0fe] flex items-center gap-1.5 font-medium text-[13px]"
+                                className="h-9 px-3 rounded-full transition-colors bg-[#f8f9fa] text-[#174ea6] border border-[#dadce0] hover:bg-[#e8f0fe] flex items-center gap-1.5 font-medium text-[13px]"
                                 title={siteSettings?.staffLoginMethod === 'otp' ? 'שנה מצב כניסת צוות לקוד סטטי' : 'שנה מצב כניסת צוות ל-SMS OTP'}
                             >
                                 {siteSettings?.staffLoginMethod === 'otp' ? <Smartphone size={16} /> : <KeyRound size={16} />}
@@ -186,24 +299,24 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
                                     await setDoc(doc(db, 'artifacts', appId, 'public', 'config'), { isSiteClosed: isClosed }, { merge: true });
                                     showToast(isClosed ? "האתר נסגר כעת למשתמשים" : "האתר נפתח מחדש למשתמשים", isClosed ? "error" : "success");
                                 }}
-                                className={`h-9 px-3 rounded-full transition-colors border ${siteSettings?.isSiteClosed ? 'bg-[#fce8e6] text-[#d93025] border-[#fce8e6]' : 'bg-[#f8f9fa] text-[#5f6368] border-[#dadce0] hover:text-[#202124]'}`}
+                                className={`h-9 px-3 rounded-full transition-colors border ${siteSettings?.isSiteClosed ? 'bg-[#fce8e6] text-[#991b1b] border-[#fce8e6]' : 'bg-[#f8f9fa] text-[#3c4043] border-[#dadce0] hover:text-[#202124]'}`}
                                 title={siteSettings?.isSiteClosed ? 'פתח אתר' : 'נעילת אתר חירום למשתמשים'}
                             >
                                 {siteSettings?.isSiteClosed ? <Lock size={16} /> : <Unlock size={16} />}
                             </button>
                         </>
                     )}
-                    <button onClick={() => setView('login')} className="h-9 px-4 rounded-full text-[#d93025] font-medium bg-[#fce8e6] hover:bg-[#fad2cf] transition-colors text-[13px]">התנתק</button>
+                    <button onClick={() => setView('login')} className="h-9 px-4 rounded-full text-[#991b1b] font-semibold bg-[#fee2e2] hover:bg-[#fecaca] transition-colors text-[13px]">התנתק</button>
                 </div>
             </header>
 
-            {/* Admin Subview Navigation Bar */}
-            <div className="flex w-full bg-white p-1 rounded-full border border-[#dadce0] gap-1 overflow-x-auto no-scrollbar shrink-0">
-                <button onClick={() => setAdminSubView('reports')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all ${adminSubView === 'reports' ? 'bg-[#1a73e8] text-white' : 'text-[#5f6368] hover:text-[#202124]'}`}>דוחות קורס</button>
-                <button onClick={() => setAdminSubView('analytics')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all ${adminSubView === 'analytics' ? 'bg-[#1a73e8] text-white' : 'text-[#5f6368] hover:text-[#202124]'}`}>אנליטיקה</button>
-                <button onClick={() => setAdminSubView('users')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all ${adminSubView === 'users' ? 'bg-[#1a73e8] text-white' : 'text-[#5f6368] hover:text-[#202124]'}`}>משתמשים</button>
-                <button onClick={() => setAdminSubView('exams')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all ${adminSubView === 'exams' ? 'bg-[#1a73e8] text-white' : 'text-[#5f6368] hover:text-[#202124]'}`}>מבחנים</button>
-                <button onClick={() => setAdminSubView('events')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all ${adminSubView === 'events' ? 'bg-[#1a73e8] text-white' : 'text-[#5f6368] hover:text-[#202124]'}`}>לוח אירועים</button>
+            {/* Admin Subview Navigation Bar (Desktop / Tablet only) */}
+            <div className="hidden sm:flex w-full bg-white p-1 rounded-full border border-[#dadce0] gap-1 overflow-x-auto no-scrollbar shrink-0">
+                <button onClick={() => setAdminSubView('reports')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all ${adminSubView === 'reports' ? 'bg-[#1a73e8] text-white' : 'text-[#3c4043] hover:text-[#202124]'}`}>דוחות קורס</button>
+                <button onClick={() => setAdminSubView('analytics')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all ${adminSubView === 'analytics' ? 'bg-[#1a73e8] text-white' : 'text-[#3c4043] hover:text-[#202124]'}`}>אנליטיקה</button>
+                <button onClick={() => setAdminSubView('users')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all ${adminSubView === 'users' ? 'bg-[#1a73e8] text-white' : 'text-[#3c4043] hover:text-[#202124]'}`}>משתמשים</button>
+                <button onClick={() => setAdminSubView('exams')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all ${adminSubView === 'exams' ? 'bg-[#1a73e8] text-white' : 'text-[#3c4043] hover:text-[#202124]'}`}>מבחנים</button>
+                <button onClick={() => setAdminSubView('events')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all ${adminSubView === 'events' ? 'bg-[#1a73e8] text-white' : 'text-[#3c4043] hover:text-[#202124]'}`}>לוח אירועים</button>
             </div>
 
             {/* SubView Contents */}
@@ -516,8 +629,8 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
                             </div>
                         </div>
                         <div className="flex-1 min-w-[200px]">
-                            <label className="text-[13px] font-medium text-[#3c4043] block mb-2 mr-1">סנן לפי מחלקה</label>
-                            <select className="w-full h-10 px-3 rounded border border-[#dadce0] bg-white font-normal text-[13px] text-right text-[#3c4043] outline-none focus:border-[#1a73e8]" value={filterDept} onChange={e => setFilterDept(e.target.value)}>
+                            <label htmlFor="department-filter" className="text-[13px] font-medium text-[#3c4043] block mb-2 mr-1">סנן לפי מחלקה</label>
+                            <select id="department-filter" aria-label="סנן לפי מחלקה" className="w-full h-10 px-3 rounded border border-[#dadce0] bg-white font-normal text-[13px] text-right text-[#3c4043] outline-none focus:border-[#1a73e8]" value={filterDept} onChange={e => setFilterDept(e.target.value)}>
                                 <option value="all">כל המחלקות</option>
                                 {[...new Set(uniqueUsersList.map(u => parseInt(u.group) || 0))].filter(g => g > 0).sort((a, b) => a - b).map(g => <option key={g} value={g.toString()}>מחלקה {g}</option>)}
                             </select>
@@ -525,10 +638,10 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
                         <button onClick={handleExportCSV} className="h-10 px-6 bg-[#1a73e8] hover:bg-[#1967d2] text-white rounded-full font-medium text-[14px] flex items-center gap-2 transition-all shrink-0"><Download size={18} /> ייצוא CSV</button>
                     </div>
                     <div className="bg-white rounded-[24px] border border-[#dadce0] overflow-hidden">
-                        <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+                        <div className="overflow-x-auto max-h-[600px] overflow-y-auto" tabIndex={0} role="region" aria-label="טבלת נתוני דוחות">
                             <table className="w-full text-right border-collapse" dir="rtl">
                                 <thead className="sticky top-0 z-10 bg-[#f8f9fa] border-b border-[#dadce0]">
-                                    <tr className="text-[#5f6368] text-[12px] font-medium border-b border-[#dadce0]">
+                                    <tr className="text-[#3c4043] text-[12px] font-semibold border-b border-[#dadce0]">
                                         <th className="p-4">חניך</th>
                                         <th className="p-4">מחלקה</th>
                                         <th className="p-4">בית ספר</th>
@@ -553,11 +666,26 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
                                                     <td className="p-4 text-[#5f6368] text-[13px] font-normal">{student.school || 'לא שויך'}</td>
                                                     {attendanceEvents.map(ev => {
                                                         const status = att[ev.id];
+                                                        const isPresent = status === true;
+                                                        const isMissing = status === 'missing' || status === 'חסר';
+                                                        const isAbsent = status === false;
                                                         return (
                                                             <td key={ev.id} className="p-1 text-center">
-                                                                <div className={`mx-auto w-6 h-6 rounded-full flex items-center justify-center ${status === true ? 'bg-[#188038] text-white' : status === false ? 'bg-[#d93025] text-white' : 'bg-[#f8f9fa] text-[#5f6368]'}`}>
-                                                                    {status === true && <Check size={12} />}
-                                                                    {status === false && <X size={12} className="stroke-[2.5]" />}
+                                                                <div
+                                                                    className={`mx-auto w-6 h-6 rounded-full flex items-center justify-center ${
+                                                                        isPresent
+                                                                            ? 'bg-[#188038] text-white'
+                                                                            : isMissing
+                                                                            ? 'bg-[#f9ab00] text-white'
+                                                                            : isAbsent
+                                                                            ? 'bg-[#d93025] text-white'
+                                                                            : 'bg-[#f8f9fa] text-[#5f6368]'
+                                                                    }`}
+                                                                    title={isPresent ? 'נכח' : isMissing ? 'חסר' : isAbsent ? 'נעדר' : 'לא דווח'}
+                                                                >
+                                                                    {isPresent && <Check size={12} />}
+                                                                    {isMissing && <div className="w-2 h-2 rounded-full bg-white" />}
+                                                                    {isAbsent && <X size={12} className="stroke-[2.5]" />}
                                                                     {status === undefined && <span className="text-[10px]">-</span>}
                                                                 </div>
                                                             </td>
@@ -628,6 +756,17 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
                     showToast={showToast}
                 />
             )}
+
+            <MobileBottomNav
+                ariaLabel="ניווט מערכת ניהול למובייל"
+                items={[
+                    { id: 'reports', label: 'דוחות', icon: FileText, onClick: () => setAdminSubView('reports'), active: adminSubView === 'reports' },
+                    { id: 'analytics', label: 'ניתוח', icon: PieChart, onClick: () => setAdminSubView('analytics'), active: adminSubView === 'analytics' },
+                    { id: 'users', label: 'משתמשים', icon: Users, onClick: () => setAdminSubView('users'), active: adminSubView === 'users' },
+                    { id: 'exams', label: 'מבחנים', icon: GraduationCap, onClick: () => setAdminSubView('exams'), active: adminSubView === 'exams' },
+                    { id: 'events', label: 'אירועים', icon: Calendar, onClick: () => setAdminSubView('events'), active: adminSubView === 'events' },
+                ]}
+            />
         </div>
     );
 }
