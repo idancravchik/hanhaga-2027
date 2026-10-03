@@ -305,7 +305,10 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
                         {(eventsList || [])
                             .filter((e: any) => e.type !== 'יום חשיפה')
                             .map((ev: any, idx: number) => {
-                                const isPresent = !!studentAtt[ev.id];
+                                const status = studentAtt[ev.id];
+                                const isPresent = status === true;
+                                const isMissing = status === 'missing' || status === 'חסר';
+                                const isAbsent = status === false;
                                 return (
                                     <span
                                         key={`student_att_${ev.id || idx}`}
