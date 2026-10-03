@@ -157,7 +157,7 @@ const AppContent: React.FC = () => {
                 query(collection(db, 'artifacts', appId, 'public', 'data', 'grades'), where('studentId', '==', profile.id)),
                 (s) => {
                     const m: Record<string, any> = {};
-                    s.docs.forEach((d) => (m[d.id] = d.data()));
+                    s.docs.forEach((d) => (m[d.id] = { id: d.id, ...d.data() }));
                     setGrades(m);
                 }
             );
@@ -165,13 +165,13 @@ const AppContent: React.FC = () => {
                 query(collection(db, 'artifacts', appId, 'public', 'data', 'notes'), where('studentId', '==', profile.id)),
                 (s) => {
                     const m: Record<string, any> = {};
-                    s.docs.forEach((d) => (m[d.id] = d.data()));
+                    s.docs.forEach((d) => (m[d.id] = { id: d.id, ...d.data() }));
                     setNotes(m);
                 }
             );
             const unsubAtt = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'attendance', profile.id || ''), (d) => {
                 const m: Record<string, any> = {};
-                if (d.exists()) m[d.id] = d.data();
+                if (d.exists()) m[d.id] = { id: d.id, ...d.data() };
                 setAttendance(m);
             });
             return () => {
@@ -183,17 +183,17 @@ const AppContent: React.FC = () => {
             // Staff global sync
             const unsubGrades = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'grades'), (s) => {
                 const m: Record<string, any> = {};
-                s.docs.forEach((d) => (m[d.id] = d.data()));
+                s.docs.forEach((d) => (m[d.id] = { id: d.id, ...d.data() }));
                 setGrades(m);
             });
             const unsubAtt = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'attendance'), (s) => {
                 const m: Record<string, any> = {};
-                s.docs.forEach((d) => (m[d.id] = d.data()));
+                s.docs.forEach((d) => (m[d.id] = { id: d.id, ...d.data() }));
                 setAttendance(m);
             });
             const unsubNotes = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'notes'), (s) => {
                 const m: Record<string, any> = {};
-                s.docs.forEach((d) => (m[d.id] = d.data()));
+                s.docs.forEach((d) => (m[d.id] = { id: d.id, ...d.data() }));
                 setNotes(m);
             });
             return () => {

@@ -18,10 +18,9 @@ import { AttendanceReportTable } from '../components/events/AttendanceReportTabl
 
 export default function AdminView({ profile, usersList, exams, grades, attendance, notes, eventsList = [], deleteUser, setView, showToast, showAlert, siteSettings }) {
     const [adminSubView, setAdminSubViewInternal] = useState('reports');
-    const [selectedStudentCard, setSelectedStudentCardInternal] = useState(null);
+    const [selectedStudentProfile, setSelectedStudentProfile] = useState(null);
     const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
     const [userToEdit, setUserToEdit] = useState(null);
-    const [selectedStudentProfile, setSelectedStudentProfile] = useState(null);
     const [isExamModalOpen, setIsExamModalOpen] = useState(false);
     const [examToEdit, setExamToEdit] = useState(null);
     const [gradeModalExam, setGradeModalExam] = useState(null);
@@ -35,18 +34,18 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
         const newState = {
             view: profile?.role === 'admin' || profile?.role === 'inspector' ? profile.role : 'login',
             adminSubView: newSubView,
-            selectedStudentCard: studentId
+            selectedStudentId: studentId
         };
         window.history.pushState(newState, '', '');
     };
 
     const setAdminSubView = (v, push = true) => {
         setAdminSubViewInternal(v);
-        if (push) handlePushState(v, selectedStudentCard?.id || null);
+        if (push) handlePushState(v, selectedStudentProfile?.id || null);
     };
 
-    const setSelectedStudentCard = (student, push = true) => {
-        setSelectedStudentCardInternal(student);
+    const handleSelectStudentProfile = (student, push = true) => {
+        setSelectedStudentProfile(student);
         if (push) handlePushState(adminSubView, student?.id || null);
     };
 
@@ -54,8 +53,8 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
         const handlePopState = (event) => {
             if (event.state && (event.state.view === 'admin' || event.state.view === 'inspector')) {
                 setAdminSubViewInternal(event.state.adminSubView || 'reports');
-                const student = usersList.find(u => u.id === event.state.selectedStudentCard);
-                setSelectedStudentCardInternal(student || null);
+                const student = usersList.find(u => u.id === event.state.selectedStudentId || u.id === event.state.selectedStudentCard);
+                setSelectedStudentProfile(student || null);
             }
         };
         window.addEventListener('popstate', handlePopState);
@@ -159,118 +158,8 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
         showToast('הדוח יוצא בהצלחה!');
     };
 
-    if (selectedStudentCard) {
-        const studentAtt = attendance[selectedStudentCard.id] || {};
-        const studentNote = notes[selectedStudentCard.id]?.content || '';
-        const studentTags = selectedStudentCard.tags || [];
-
-        return (
-            <div className="fixed inset-0 z-50 bg-[#202124]/50 flex items-center justify-center p-4">
-                <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-[24px] border border-[#dadce0] flex flex-col overflow-hidden text-right" dir="rtl">
-                    <header className="p-6 border-b border-[#dadce0] bg-[#f8f9fa] flex justify-between items-start shrink-0 text-right" dir="rtl">
-                        <div>
-                            <h2 className="text-[24px] font-medium text-[#202124] mb-2">{selectedStudentCard.name}</h2>
-                            <div className="flex gap-2 text-[13px] font-normal text-[#5f6368] flex-wrap">
-                                <span className="bg-white px-3 py-0.5 rounded-full border border-[#dadce0] text-[#3c4043]">מחלקה {selectedStudentCard.group}</span>
-                                <span className="bg-white px-3 py-0.5 rounded-full border border-[#dadce0] text-[#3c4043]">{selectedStudentCard.school}</span>
-                                <span className="bg-white px-3 py-0.5 rounded-full border border-[#dadce0] text-[#3c4043]" dir="ltr">{selectedStudentCard.phone}</span>
-                            </div>
-                            
-                            {studentTags.length > 0 && (
-                                <div className="flex flex-wrap gap-1.5 mt-3">
-                                    {studentTags.map((tag, idx) => {
-                                        const tagDef = TAGS_CATALOG.find(t => t.id === tag.id);
-                                        const badgeClass = getTagColorClasses(tagDef?.color);
-                                        return (
-                                            <span key={idx} className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${badgeClass}`}>
-                                                {tag.label}{tag.detail ? `: ${tag.detail}` : ''}
-                                            </span>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
-                        <button onClick={() => setSelectedStudentCard(null)} className="p-2 bg-[#f1f3f4] hover:bg-[#e8eaed] text-[#3c4043] rounded-full transition-colors">
-                            <X size={20} />
-                        </button>
-                    </header>
-
-                    <div className="p-6 overflow-y-auto space-y-6 flex-1 text-right" dir="rtl">
-                        {/* Notes Section */}
-                        <section className="bg-[#e8f0fe] p-5 rounded-[24px] border border-[#dadce0]">
-                            <div className="flex items-center gap-2 mb-3 text-[#1a73e8]">
-                                <BookOpen size={18} />
-                                <h3 className="font-medium text-[16px] text-[#202124]">מעקב מדריך (תיק אישי)</h3>
-                            </div>
-                            {studentNote ? (
-                                <p className="font-normal text-[#3c4043] text-[14px] whitespace-pre-wrap leading-relaxed">{studentNote}</p>
-                            ) : (
-                                <p className="text-[#5f6368] text-[13px] font-normal italic">לא נרשמו הערות בתיק האישי.</p>
-                            )}
-                        </section>
-
-                        {/* Attendance Section */}
-                        <section>
-                            <h3 className="font-medium text-[#202124] text-[16px] mb-3 flex items-center gap-2"><Check size={18} className="text-[#188038]" /> נוכחות הכנות</h3>
-                            <div className="flex flex-wrap gap-2">
-                                {attendanceEvents.map(ev => {
-                                    const status = studentAtt[ev.id];
-                                    let badgeStyle = 'bg-[#f8f9fa] text-[#3c4043] border-[#dadce0]';
-                                    if (status === true) badgeStyle = 'bg-[#188038] text-white border-[#188038]';
-                                    if (status === false) badgeStyle = 'bg-[#d93025] text-white border-[#d93025]';
-                                    return (
-                                        <div key={ev.id} className={`px-3 py-1 rounded-full flex items-center gap-1.5 text-[12px] font-medium border ${badgeStyle}`}>
-                                            {ev.title} {status === true && <Check size={14} />}
-                                            {status === false && <X size={14} />}
-                                            {status === undefined && <span className="text-[10px] opacity-75">-</span>}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </section>
-
-                        {/* Grades Section */}
-                        <section>
-                            <h3 className="font-medium text-[#202124] text-[16px] mb-3 flex items-center gap-2"><GraduationCap size={18} className="text-[#1a73e8]" /> פירוט מבחנים</h3>
-                            <div className="space-y-4">
-                                {exams.map(exam => {
-                                    const g = grades[`${selectedStudentCard.id}_${exam.id}`];
-                                    if (!g) return null;
-                                    const total = Object.values(g.scores).reduce((a, b) => (parseInt(a) || 0) + (parseInt(b) || 0), 0);
-
-                                    return (
-                                        <div key={exam.id} className="p-5 border border-[#dadce0] rounded-[24px] bg-white">
-                                            <div className="flex justify-between items-center mb-3">
-                                                <h4 className="font-medium text-[16px] text-[#202124]">{exam.title}</h4>
-                                                <span className="text-[20px] font-medium text-[#1a73e8] tabular-nums">{total} נק'</span>
-                                            </div>
-                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mb-3">
-                                                {exam.categories.map((cat, i) => (
-                                                    <div key={i} className="bg-[#f8f9fa] p-3 rounded-lg border border-[#dadce0] flex justify-between items-center">
-                                                        <span className="font-normal text-[#5f6368] text-[12px]">{cat.name}</span>
-                                                        <span className="font-medium text-[#202124] text-[13px] tabular-nums">{g.scores[cat.name] || 0} / {cat.maxScore ?? cat.max ?? 100}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            {g.comment && (
-                                                <div className="bg-[#f8f9fa] p-3.5 rounded-lg border border-[#dadce0] mt-2">
-                                                    <span className="text-[12px] font-medium text-[#3c4043] block mb-1">הערת מעריך:</span>
-                                                    <p className="font-normal text-[#3c4043] text-[13px] leading-relaxed">"{g.comment}"</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </section>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
     return (
-        <div className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-4 sm:space-y-6 text-right text-[#202124] font-sans" dir="rtl">
+        <div className="p-3 sm:p-6 lg:p-8 max-w-[1600px] mx-auto w-full space-y-4 sm:space-y-6 text-right text-[#202124] font-sans" dir="rtl">
             <header className="bg-white p-4 sm:p-6 rounded-[24px] border border-[#dadce0] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex items-center gap-3">
                     <img src={LOGO_URL} className="w-9 h-9 sm:w-10 sm:h-10 object-contain" alt="Logo" />
@@ -319,7 +208,7 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
 
             {/* SubView Contents */}
             {adminSubView === 'events' && (
-                <div className="space-y-4 sm:space-y-6 max-w-4xl mx-auto" dir="rtl">
+                <div className="space-y-4 sm:space-y-6 w-full" dir="rtl">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-6 rounded-[24px] border border-[#dadce0]">
                         <div>
                             <h3 className="text-[18px] sm:text-[20px] font-medium text-[#202124]">לוח אירועים ומפגשים ({eventsList.length})</h3>

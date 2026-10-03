@@ -223,7 +223,7 @@ export default function InstructorView({ profile, usersList, exams, grades, atte
     }
 
     return (
-        <div className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full font-sans pb-20 text-right text-[#202124]" dir="rtl">
+        <div className="p-3 sm:p-6 lg:p-8 max-w-[1600px] mx-auto w-full font-sans pb-20 text-right text-[#202124]" dir="rtl">
             <header className="flex justify-between items-center bg-white p-4 sm:p-6 rounded-[24px] border border-[#dadce0] mb-4 sm:mb-6">
                 <div className="flex items-center gap-3">
                     <img src={LOGO_URL} className="w-9 h-9 sm:w-10 sm:h-10 object-contain" alt="Logo" />
@@ -348,10 +348,7 @@ export default function InstructorView({ profile, usersList, exams, grades, atte
 
                                             <div>
                                                 <button
-                                                    onClick={() => {
-                                                        setSelectedStudent({ ...student, isNoteMode: true });
-                                                        setComment(studentNote);
-                                                    }}
+                                                    onClick={() => setSelectedStudentForModal(student)}
                                                     className={`w-full p-3 rounded-lg border text-right transition-all flex items-center justify-between bg-white ${studentNote ? 'border-[#1a73e8] text-[#202124]' : 'border-[#dadce0] text-[#5f6368]'}`}
                                                 >
                                                     <div className="flex items-center gap-2">
