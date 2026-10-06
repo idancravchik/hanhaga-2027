@@ -12,11 +12,18 @@ import { db, auth, appId } from './config/firebase';
 import { UserProfile, UserRole } from './types/user';
 import { ModalState, ToastState } from './types/ui';
 
-import LoginView from './views/LoginView';
-import AdminView from './views/AdminView';
-import InstructorView from './views/InstructorView';
-import StudentView from './views/StudentView';
-import GameView from './views/game/GameView';
+const LoginView = React.lazy(() => import('./views/LoginView'));
+const AdminView = React.lazy(() => import('./views/AdminView'));
+const InstructorView = React.lazy(() => import('./views/InstructorView'));
+const StudentView = React.lazy(() => import('./views/StudentView'));
+const GameView = React.lazy(() => import('./views/game/GameView'));
+
+const ViewSkeleton: React.FC = () => (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center" dir="rtl" aria-busy="true" aria-live="polite">
+        <Loader2 className="animate-spin text-[#1a73e8] mb-3" size={36} />
+        <p className="text-[14px] text-[#5f6368] font-medium animate-pulse">טוען תצוגה...</p>
+    </div>
+);
 
 const AppContent: React.FC = () => {
     const { user, profile, role, loading: authLoading, logout } = useAuth();
@@ -259,7 +266,11 @@ const AppContent: React.FC = () => {
     };
 
     if (view === 'game' || isGameRoute()) {
-        return <GameView />;
+        return (
+            <React.Suspense fallback={<ViewSkeleton />}>
+                <GameView />
+            </React.Suspense>
+        );
     }
 
     if (authLoading) {
@@ -276,67 +287,69 @@ const AppContent: React.FC = () => {
             <Modal modal={modal} setModal={setModal} />
             <A2HSPrompt />
 
-            {!profile || view === 'login' ? (
-                <LoginView
-                    usersList={usersList}
-                    siteSettings={siteSettings}
-                    showToast={showToast}
-                    onLoginSuccess={() => {
-                        const targetView = profile ? (profile.role || 'student').toLowerCase() : 'student';
-                        setView(targetView);
-                    }}
-                />
-            ) : (
-                <>
-                    {view === 'student' && (
-                        <ProtectedRoute allowedRoles={['student', 'instructor', 'assistant', 'admin', 'inspector'] as UserRole[]}>
-                            <StudentView
-                                profile={profile}
-                                exams={exams}
-                                grades={grades}
-                                attendance={attendance}
-                                eventsList={eventsList}
-                                setView={setView}
-                            />
-                        </ProtectedRoute>
-                    )}
+            <React.Suspense fallback={<ViewSkeleton />}>
+                {!profile || view === 'login' ? (
+                    <LoginView
+                        usersList={usersList}
+                        siteSettings={siteSettings}
+                        showToast={showToast}
+                        onLoginSuccess={() => {
+                            const targetView = profile ? (profile.role || 'student').toLowerCase() : 'student';
+                            setView(targetView);
+                        }}
+                    />
+                ) : (
+                    <>
+                        {view === 'student' && (
+                            <ProtectedRoute allowedRoles={['student', 'instructor', 'assistant', 'admin', 'inspector'] as UserRole[]}>
+                                <StudentView
+                                    profile={profile}
+                                    exams={exams}
+                                    grades={grades}
+                                    attendance={attendance}
+                                    eventsList={eventsList}
+                                    setView={setView}
+                                />
+                            </ProtectedRoute>
+                        )}
 
-                    {(view === 'instructor' || view === 'assistant') && (
-                        <ProtectedRoute allowedRoles={['instructor', 'assistant', 'admin', 'inspector'] as UserRole[]}>
-                            <InstructorView
-                                profile={profile}
-                                usersList={usersList}
-                                exams={exams}
-                                grades={grades}
-                                attendance={attendance}
-                                notes={notes}
-                                eventsList={eventsList}
-                                setView={setView}
-                                showToast={showToast}
-                            />
-                        </ProtectedRoute>
-                    )}
+                        {(view === 'instructor' || view === 'assistant') && (
+                            <ProtectedRoute allowedRoles={['instructor', 'assistant', 'admin', 'inspector'] as UserRole[]}>
+                                <InstructorView
+                                    profile={profile}
+                                    usersList={usersList}
+                                    exams={exams}
+                                    grades={grades}
+                                    attendance={attendance}
+                                    notes={notes}
+                                    eventsList={eventsList}
+                                    setView={setView}
+                                    showToast={showToast}
+                                />
+                            </ProtectedRoute>
+                        )}
 
-                    {(view === 'admin' || view === 'inspector') && (
-                        <ProtectedRoute allowedRoles={['admin', 'inspector'] as UserRole[]}>
-                            <AdminView
-                                profile={profile}
-                                usersList={usersList}
-                                exams={exams}
-                                grades={grades}
-                                attendance={attendance}
-                                notes={notes}
-                                eventsList={eventsList}
-                                deleteUser={deleteUser}
-                                setView={setView}
-                                showToast={showToast}
-                                showAlert={showAlert}
-                                siteSettings={siteSettings}
-                            />
-                        </ProtectedRoute>
-                    )}
-                </>
-            )}
+                        {(view === 'admin' || view === 'inspector') && (
+                            <ProtectedRoute allowedRoles={['admin', 'inspector'] as UserRole[]}>
+                                <AdminView
+                                    profile={profile}
+                                    usersList={usersList}
+                                    exams={exams}
+                                    grades={grades}
+                                    attendance={attendance}
+                                    notes={notes}
+                                    eventsList={eventsList}
+                                    deleteUser={deleteUser}
+                                    setView={setView}
+                                    showToast={showToast}
+                                    showAlert={showAlert}
+                                    siteSettings={siteSettings}
+                                />
+                            </ProtectedRoute>
+                        )}
+                    </>
+                )}
+            </React.Suspense>
         </div>
     );
 };

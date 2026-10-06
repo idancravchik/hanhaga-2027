@@ -4,9 +4,10 @@ import { LOGO_URL, getUserAvatar, TAGS_CATALOG, getTagColorClasses } from '../co
 import { doc, setDoc } from 'firebase/firestore';
 import { signInAnonymously } from 'firebase/auth';
 import { db, auth, appId } from '../config/firebase';
-import { StudentProfileModal } from '../components/users/StudentProfileModal';
-import { AttendanceReportTable } from '../components/events/AttendanceReportTable';
 import { MobileBottomNav } from '../components/navigation/MobileBottomNav';
+
+const StudentProfileModal = React.lazy(() => import('../components/users/StudentProfileModal').then(m => ({ default: m.StudentProfileModal })));
+const AttendanceReportTable = React.lazy(() => import('../components/events/AttendanceReportTable').then(m => ({ default: m.AttendanceReportTable })));
 
 export default function InstructorView({ profile, usersList, exams, grades, attendance, notes, eventsList, setView, showToast, isMixedAssessment = false }) {
     const [instructorSubView, setInstructorSubViewInternal] = useState('students');
@@ -212,13 +213,15 @@ export default function InstructorView({ profile, usersList, exams, grades, atte
         return (
             <div className="p-4 sm:p-6 max-w-7xl mx-auto w-full font-sans pb-20 text-right text-[#202124]" dir="rtl">
                 <button onClick={() => setSelectedMeetingInternal(null)} className="mb-4 flex items-center text-[#1a73e8] font-medium text-[14px] gap-1 hover:underline"><ChevronLeft size={16} /> חזרה למפגשים</button>
-                <AttendanceReportTable
-                    event={currentEvent}
-                    students={filteredGroupStudents}
-                    attendance={attendance}
-                    onClose={() => setSelectedMeetingInternal(null)}
-                    showToast={showToast}
-                />
+                <React.Suspense fallback={<div className="p-8 text-center text-[#5f6368] text-sm animate-pulse">טוען לוח נוכחות...</div>}>
+                    <AttendanceReportTable
+                        event={currentEvent}
+                        students={filteredGroupStudents}
+                        attendance={attendance}
+                        onClose={() => setSelectedMeetingInternal(null)}
+                        showToast={showToast}
+                    />
+                </React.Suspense>
             </div>
         );
     }
@@ -393,19 +396,21 @@ export default function InstructorView({ profile, usersList, exams, grades, atte
                 </div>
             )}
 
-            {(selectedStudent || selectedStudentForModal) && (
-                <StudentProfileModal
-                    student={selectedStudent || selectedStudentForModal}
-                    onClose={() => { setSelectedStudentInternal(null); setSelectedStudentForModal(null); }}
-                    currentProfile={profile}
-                    exams={exams}
-                    grades={grades}
-                    attendance={attendance}
-                    notes={notes}
-                    eventsList={eventsList}
-                    showToast={showToast}
-                />
-            )}
+            <React.Suspense fallback={null}>
+                {(selectedStudent || selectedStudentForModal) && (
+                    <StudentProfileModal
+                        student={selectedStudent || selectedStudentForModal}
+                        onClose={() => { setSelectedStudentInternal(null); setSelectedStudentForModal(null); }}
+                        currentProfile={profile}
+                        exams={exams}
+                        grades={grades}
+                        attendance={attendance}
+                        notes={notes}
+                        eventsList={eventsList}
+                        showToast={showToast}
+                    />
+                )}
+            </React.Suspense>
 
             {profile?.role !== 'assistant' && (
                 <MobileBottomNav

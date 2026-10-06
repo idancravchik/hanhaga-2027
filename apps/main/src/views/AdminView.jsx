@@ -6,16 +6,17 @@ import {
 } from 'lucide-react';
 import { doc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db, appId } from '../config/firebase';
-import { LOGO_URL, SCHOOL_LIST, TAGS_CATALOG, getTagColorClasses } from '../config/constants';
+import { LOGO_URL, SCHOOL_LIST, TAGS_CATALOG } from '../config/constants';
 import { parseUsersCSV, exportUsersToCSV } from '../utils/csv';
-import { StudentProfileModal } from '../components/users/StudentProfileModal';
-import { UserFormModal } from '../components/users/UserFormModal';
-import { UserManagementTable } from '../components/users/UserManagementTable';
-import { ExamBuilderModal } from '../components/exams/ExamBuilderModal';
-import { GradeEntryModal } from '../components/exams/GradeEntryModal';
-import { EventBuilderModal } from '../components/events/EventBuilderModal';
-import { AttendanceReportTable } from '../components/events/AttendanceReportTable';
 import { MobileBottomNav } from '../components/navigation/MobileBottomNav';
+
+const StudentProfileModal = React.lazy(() => import('../components/users/StudentProfileModal').then(m => ({ default: m.StudentProfileModal })));
+const UserFormModal = React.lazy(() => import('../components/users/UserFormModal').then(m => ({ default: m.UserFormModal })));
+const UserManagementTable = React.lazy(() => import('../components/users/UserManagementTable').then(m => ({ default: m.UserManagementTable })));
+const ExamBuilderModal = React.lazy(() => import('../components/exams/ExamBuilderModal').then(m => ({ default: m.ExamBuilderModal })));
+const GradeEntryModal = React.lazy(() => import('../components/exams/GradeEntryModal').then(m => ({ default: m.GradeEntryModal })));
+const EventBuilderModal = React.lazy(() => import('../components/events/EventBuilderModal').then(m => ({ default: m.EventBuilderModal })));
+const AttendanceReportTable = React.lazy(() => import('../components/events/AttendanceReportTable').then(m => ({ default: m.AttendanceReportTable })));
 
 export default function AdminView({ profile, usersList, exams, grades, attendance, notes, eventsList = [], deleteUser, setView, showToast, showAlert, siteSettings }) {
     const [adminSubView, setAdminSubViewInternal] = useState('reports');
@@ -224,13 +225,15 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
                     </div>
 
                     {selectedAttendanceEvent ? (
-                        <AttendanceReportTable
-                            event={selectedAttendanceEvent}
-                            students={filteredStudents}
-                            attendance={attendance}
-                            onClose={() => setSelectedAttendanceEvent(null)}
-                            showToast={showToast}
-                        />
+                        <React.Suspense fallback={<div className="p-8 text-center text-[#5f6368] text-sm animate-pulse">טוען נתוני נוכחות...</div>}>
+                            <AttendanceReportTable
+                                event={selectedAttendanceEvent}
+                                students={filteredStudents}
+                                attendance={attendance}
+                                onClose={() => setSelectedAttendanceEvent(null)}
+                                showToast={showToast}
+                            />
+                        </React.Suspense>
                     ) : (
                         <div className="bg-white rounded-[24px] overflow-hidden border border-[#dadce0]">
                             <div className="divide-y divide-[#dadce0]">
@@ -386,16 +389,18 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
             {adminSubView === 'users' && (
                 <div className="space-y-6">
                     <input type="file" ref={fileInputRef} className="hidden" accept=".csv" onChange={handleImportCSV} />
-                    <UserManagementTable
-                        usersList={uniqueUsersList}
-                        currentRole={profile?.role || 'admin'}
-                        onSelectStudent={(student) => setSelectedStudentProfile(student)}
-                        onEditUser={(user) => { setUserToEdit(user); setIsAddUserModalOpen(true); }}
-                        onDeleteUser={(userId) => deleteUser(userId)}
-                        onOpenAddModal={() => { setUserToEdit(null); setIsAddUserModalOpen(true); }}
-                        onImportCSV={() => fileInputRef.current?.click()}
-                        onExportCSV={handleExportCSV}
-                    />
+                    <React.Suspense fallback={<div className="p-8 text-center text-[#5f6368] text-sm animate-pulse">טוען נתוני משתמשים...</div>}>
+                        <UserManagementTable
+                            usersList={uniqueUsersList}
+                            currentRole={profile?.role || 'admin'}
+                            onSelectStudent={(student) => handleSelectStudentProfile(student)}
+                            onEditUser={(user) => { setUserToEdit(user); setIsAddUserModalOpen(true); }}
+                            onDeleteUser={(userId) => deleteUser(userId)}
+                            onOpenAddModal={() => { setUserToEdit(null); setIsAddUserModalOpen(true); }}
+                            onImportCSV={() => fileInputRef.current?.click()}
+                            onExportCSV={handleExportCSV}
+                        />
+                    </React.Suspense>
                 </div>
             )}
 
@@ -548,7 +553,7 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
                                         filteredStudents.map(student => {
                                             const att = attendance[student.id] || attendance[student.phone] || attendance[student.firestoreId] || {};
                                             return (
-                                                <tr key={student.firestoreId || student.id || student.phone} className="hover:bg-[#f8f9fa] transition-colors group cursor-pointer" onClick={() => setSelectedStudentProfile(student)}>
+                                                <tr key={student.firestoreId || student.id || student.phone} className="hover:bg-[#f8f9fa] transition-colors group cursor-pointer" onClick={() => handleSelectStudentProfile(student)}>
                                                     <td className="p-4 font-medium text-[#1a73e8] hover:underline text-[14px]">{student.name || student.fullName}</td>
                                                     <td className="p-4 text-[#202124] font-normal text-[14px]">{student.group || 0}</td>
                                                     <td className="p-4 text-[#5f6368] text-[13px] font-normal">{student.school || 'לא שויך'}</td>
@@ -597,53 +602,55 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
                 </div>
             )}
 
-            {selectedStudentProfile && (
-                <StudentProfileModal
-                    student={selectedStudentProfile}
-                    onClose={() => setSelectedStudentProfile(null)}
-                    currentProfile={profile}
-                    exams={exams}
-                    grades={grades}
-                    attendance={attendance}
-                    notes={notes}
-                    eventsList={eventsList}
-                    showToast={showToast}
-                />
-            )}
+            <React.Suspense fallback={null}>
+                {selectedStudentProfile && (
+                    <StudentProfileModal
+                        student={selectedStudentProfile}
+                        onClose={() => setSelectedStudentProfile(null)}
+                        currentProfile={profile}
+                        exams={exams}
+                        grades={grades}
+                        attendance={attendance}
+                        notes={notes}
+                        eventsList={eventsList}
+                        showToast={showToast}
+                    />
+                )}
 
-            {isAddUserModalOpen && (
-                <UserFormModal
-                    userToEdit={userToEdit}
-                    onClose={() => { setIsAddUserModalOpen(false); setUserToEdit(null); }}
-                    showToast={showToast}
-                />
-            )}
+                {isAddUserModalOpen && (
+                    <UserFormModal
+                        userToEdit={userToEdit}
+                        onClose={() => { setIsAddUserModalOpen(false); setUserToEdit(null); }}
+                        showToast={showToast}
+                    />
+                )}
 
-            {isExamModalOpen && (
-                <ExamBuilderModal
-                    examToEdit={examToEdit}
-                    onClose={() => { setIsExamModalOpen(false); setExamToEdit(null); }}
-                    showToast={showToast}
-                />
-            )}
+                {isExamModalOpen && (
+                    <ExamBuilderModal
+                        examToEdit={examToEdit}
+                        onClose={() => { setIsExamModalOpen(false); setExamToEdit(null); }}
+                        showToast={showToast}
+                    />
+                )}
 
-            {gradeModalExam && gradeModalStudent && (
-                <GradeEntryModal
-                    exam={gradeModalExam}
-                    student={gradeModalStudent}
-                    existingGrade={grades[`${gradeModalStudent.id || gradeModalStudent.phone}_${gradeModalExam.id}`]}
-                    onClose={() => { setGradeModalExam(null); setGradeModalStudent(null); }}
-                    showToast={showToast}
-                />
-            )}
+                {gradeModalExam && gradeModalStudent && (
+                    <GradeEntryModal
+                        exam={gradeModalExam}
+                        student={gradeModalStudent}
+                        existingGrade={grades[`${gradeModalStudent.id || gradeModalStudent.phone}_${gradeModalExam.id}`]}
+                        onClose={() => { setGradeModalExam(null); setGradeModalStudent(null); }}
+                        showToast={showToast}
+                    />
+                )}
 
-            {isEventModalOpen && (
-                <EventBuilderModal
-                    eventToEdit={eventToEdit}
-                    onClose={() => { setIsEventModalOpen(false); setEventToEdit(null); }}
-                    showToast={showToast}
-                />
-            )}
+                {isEventModalOpen && (
+                    <EventBuilderModal
+                        eventToEdit={eventToEdit}
+                        onClose={() => { setIsEventModalOpen(false); setEventToEdit(null); }}
+                        showToast={showToast}
+                    />
+                )}
+            </React.Suspense>
 
             <MobileBottomNav
                 ariaLabel="ניווט מערכת ניהול למובייל"
