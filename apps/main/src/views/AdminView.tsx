@@ -1,14 +1,17 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
-    Users, Plus, ClipboardCheck, GraduationCap,
-    FileText, Download, Trash2, UserPlus,
-    Edit2, Search, Check, Eye, EyeOff, PieChart, TrendingUp, X, BarChart3, Lock, Unlock, BookOpen, ChevronDown, Calendar, AlertCircle, MessageSquare, KeyRound, Smartphone
+    Users, Plus, GraduationCap,
+    FileText, Download, Trash2,
+    Edit2, Search, Check, Eye, EyeOff, PieChart, TrendingUp, X, BarChart3, Lock, Unlock, Calendar, MessageSquare, KeyRound, Smartphone
 } from 'lucide-react';
 import { doc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db, appId } from '../config/firebase';
-import { LOGO_URL, SCHOOL_LIST, TAGS_CATALOG } from '../config/constants';
+import { LOGO_URL } from '../config/constants';
 import { parseUsersCSV, exportUsersToCSV } from '../utils/csv';
 import { MobileBottomNav } from '../components/navigation/MobileBottomNav';
+import { UserProfile } from '../types/user';
+import { Exam, GradeRecord } from '../types/exam';
+import { CourseEvent, AttendanceMap } from '../types/event';
 
 const StudentProfileModal = React.lazy(() => import('../components/users/StudentProfileModal').then(m => ({ default: m.StudentProfileModal })));
 const UserFormModal = React.lazy(() => import('../components/users/UserFormModal').then(m => ({ default: m.UserFormModal })));
@@ -18,21 +21,57 @@ const GradeEntryModal = React.lazy(() => import('../components/exams/GradeEntryM
 const EventBuilderModal = React.lazy(() => import('../components/events/EventBuilderModal').then(m => ({ default: m.EventBuilderModal })));
 const AttendanceReportTable = React.lazy(() => import('../components/events/AttendanceReportTable').then(m => ({ default: m.AttendanceReportTable })));
 
-export default function AdminView({ profile, usersList, exams, grades, attendance, notes, eventsList = [], deleteUser, setView, showToast, showAlert, siteSettings }) {
-    const [adminSubView, setAdminSubViewInternal] = useState('reports');
-    const [selectedStudentProfile, setSelectedStudentProfile] = useState(null);
-    const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
-    const [userToEdit, setUserToEdit] = useState(null);
-    const [isExamModalOpen, setIsExamModalOpen] = useState(false);
-    const [examToEdit, setExamToEdit] = useState(null);
-    const [gradeModalExam, setGradeModalExam] = useState(null);
-    const [gradeModalStudent, setGradeModalStudent] = useState(null);
-    const [isEventModalOpen, setIsEventModalOpen] = useState(false);
-    const [eventToEdit, setEventToEdit] = useState(null);
-    const [selectedAttendanceEvent, setSelectedAttendanceEvent] = useState(null);
-    const fileInputRef = useRef(null);
+export interface SiteSettings {
+    isSiteClosed?: boolean;
+    staffLoginMethod?: 'otp' | 'passcode';
+    [key: string]: any;
+}
 
-    const handlePushState = (newSubView, studentId) => {
+export interface AdminViewProps {
+    profile: UserProfile;
+    usersList: UserProfile[];
+    exams: Exam[];
+    grades: Record<string, GradeRecord | any>;
+    attendance: AttendanceMap;
+    notes: Record<string, any>;
+    eventsList?: CourseEvent[];
+    deleteUser: (userId: string) => Promise<void> | void;
+    setView: (view: string) => void;
+    showToast: (message: string, type?: 'success' | 'error') => void;
+    showAlert: (title: string, message: string) => void;
+    siteSettings?: SiteSettings;
+}
+
+type AdminSubView = 'reports' | 'analytics' | 'users' | 'exams' | 'events';
+
+export default function AdminView({
+    profile,
+    usersList,
+    exams,
+    grades,
+    attendance,
+    notes,
+    eventsList = [],
+    deleteUser,
+    setView,
+    showToast,
+    showAlert,
+    siteSettings
+}: AdminViewProps) {
+    const [adminSubView, setAdminSubViewInternal] = useState<AdminSubView>('reports');
+    const [selectedStudentProfile, setSelectedStudentProfile] = useState<UserProfile | null>(null);
+    const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+    const [userToEdit, setUserToEdit] = useState<UserProfile | null>(null);
+    const [isExamModalOpen, setIsExamModalOpen] = useState(false);
+    const [examToEdit, setExamToEdit] = useState<Exam | null>(null);
+    const [gradeModalExam, setGradeModalExam] = useState<Exam | null>(null);
+    const [gradeModalStudent, setGradeModalStudent] = useState<UserProfile | null>(null);
+    const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+    const [eventToEdit, setEventToEdit] = useState<CourseEvent | null>(null);
+    const [selectedAttendanceEvent, setSelectedAttendanceEvent] = useState<CourseEvent | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handlePushState = (newSubView: AdminSubView, studentId: string | null) => {
         const newState = {
             view: profile?.role === 'admin' || profile?.role === 'inspector' ? profile.role : 'login',
             adminSubView: newSubView,
@@ -41,20 +80,20 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
         window.history.pushState(newState, '', '');
     };
 
-    const setAdminSubView = (v, push = true) => {
+    const setAdminSubView = (v: AdminSubView, push = true) => {
         setAdminSubViewInternal(v);
         if (push) handlePushState(v, selectedStudentProfile?.id || null);
     };
 
-    const handleSelectStudentProfile = (student, push = true) => {
+    const handleSelectStudentProfile = (student: UserProfile | null, push = true) => {
         setSelectedStudentProfile(student);
         if (push) handlePushState(adminSubView, student?.id || null);
     };
 
-    React.useEffect(() => {
-        const handlePopState = (event) => {
+    useEffect(() => {
+        const handlePopState = (event: PopStateEvent) => {
             if (event.state && (event.state.view === 'admin' || event.state.view === 'inspector')) {
-                setAdminSubViewInternal(event.state.adminSubView || 'reports');
+                setAdminSubViewInternal((event.state.adminSubView as AdminSubView) || 'reports');
                 const student = usersList.find(u => u.id === event.state.selectedStudentId || u.id === event.state.selectedStudentCard);
                 setSelectedStudentProfile(student || null);
             }
@@ -63,22 +102,22 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
         return () => window.removeEventListener('popstate', handlePopState);
     }, [usersList]);
 
-    const [filterDept, setFilterDept] = useState('all');
-    const [searchQuery, setSearchQuery] = useState('');
+    const [filterDept, setFilterDept] = useState<string>('all');
+    const [searchQuery, setSearchQuery] = useState<string>('');
 
     const uniqueUsersList = usersList;
 
     const attendanceEvents = useMemo(() => {
         return (eventsList || [])
-            .filter(e => e.type !== 'יום חשיפה')
-            .sort((a, b) => new Date(a.date) - new Date(b.date));
+            .filter((e: CourseEvent) => e.type !== 'יום חשיפה')
+            .sort((a: CourseEvent, b: CourseEvent) => new Date(a.date).getTime() - new Date(b.date).getTime());
     }, [eventsList]);
 
     const filteredStudents = useMemo(() => {
         return uniqueUsersList.filter(u => {
             const role = (u.role || 'student').toLowerCase();
             const matchRole = role === 'student';
-            const normGroup = parseInt(u.group) || 0;
+            const normGroup = parseInt(String(u.group || 0), 10) || 0;
             const matchDept = filterDept === 'all' || normGroup.toString() === filterDept;
             const nameStr = (u.name || u.fullName || '').toLowerCase();
             const phoneStr = (u.phone || u.id || u.firestoreId || '').toString();
@@ -92,34 +131,39 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
         const students = uniqueUsersList.filter(u => u.role === 'student');
         const total = students.length;
 
-        const schools = students.reduce((acc, s) => {
-            acc[s.school] = (acc[s.school] || 0) + 1;
+        const schools = students.reduce<Record<string, number>>((acc, s) => {
+            const schName = s.school || 'לא שויך';
+            acc[schName] = (acc[schName] || 0) + 1;
             return acc;
         }, {});
 
         const attByMeeting = attendanceEvents.map(ev => {
-            const present = students.filter(s => attendance[s.id]?.[ev.id]).length;
+            const present = students.filter(s => {
+                const sId = s.id || s.phone || s.firestoreId;
+                return sId ? !!attendance[sId]?.[ev.id] : false;
+            }).length;
             return { meeting: ev.title, count: present, percent: total ? Math.round((present / total) * 100) : 0 };
         });
 
-        const groupGrades = [...new Set(students.map(s => parseInt(s.group) || 0))]
+        const groupGrades = [...new Set(students.map(s => parseInt(String(s.group || 0), 10) || 0))]
             .filter(g => g > 0)
             .sort((a, b) => a - b)
             .map(gNum => {
-                const gStudents = students.filter(s => (parseInt(s.group) || 0) === gNum);
+                const gStudents = students.filter(s => (parseInt(String(s.group || 0), 10) || 0) === gNum);
                 let totalSum = 0;
                 let count = 0;
                 gStudents.forEach(s => {
                     exams.forEach(e => {
-                        const gData = grades[`${s.id}_${e.id}`];
+                        const sId = s.id || s.phone || s.firestoreId;
+                        const gData = sId ? grades[`${sId}_${e.id}`] : undefined;
                         if (gData && gData.scores) {
-                            const sum = Object.values(gData.scores).reduce((a, b) => a + (parseInt(b) || 0), 0);
+                            const sum = Object.values(gData.scores as Record<string, unknown>).reduce((a: number, b: unknown) => a + (parseInt(String(b || 0), 10) || 0), 0);
                             totalSum += sum;
                             count++;
                         }
                     });
                 });
-                return { group: gNum.toString(), avg: count ? (totalSum / count).toFixed(1) : 0, studentCount: gStudents.length };
+                return { group: gNum.toString(), avg: count ? (totalSum / count).toFixed(1) : '0', studentCount: gStudents.length };
             });
 
         return { total, schools, attByMeeting, groupGrades };
@@ -127,12 +171,13 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
 
     const isIdan = profile?.name?.trim() === "עידן קרבצ'יק";
 
-    const handleImportCSV = async (e) => {
-        const file = e.target.files[0];
+    const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = async (event) => {
-            const text = event.target.result;
+        reader.onload = async (event: ProgressEvent<FileReader>) => {
+            const text = event.target?.result as string;
+            if (!text) return;
             const { users, errors, count } = parseUsersCSV(text);
 
             if (users.length > 0) {
@@ -140,8 +185,8 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
                 for (let i = 0; i < users.length; i += batchSize) {
                     const chunk = users.slice(i, i + batchSize);
                     const batch = writeBatch(db);
-                    chunk.forEach((u) => {
-                        const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', u.id);
+                    chunk.forEach((u: any) => {
+                        const userRef = doc(db, `artifacts/${appId}/public/data/users/${u.id}`);
                         batch.set(userRef, u, { merge: true });
                     });
                     await batch.commit();
@@ -165,7 +210,7 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
             <header className="bg-white p-4 sm:p-6 rounded-[24px] border border-[#dadce0] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex items-center gap-3">
                     <img src={LOGO_URL} className="w-9 h-9 sm:w-10 sm:h-10 object-contain" alt="Logo" />
-                    <h2 className="text-[17px] sm:text-[20px] font-medium text-[#202124] leading-tight">ניהול קורס - {profile.name}</h2>
+                    <h2 className="text-[17px] sm:text-[20px] font-medium text-[#202124] leading-tight">ניהול קורס - {profile.name || profile.fullName}</h2>
                 </div>
                 <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap">
                     {(isIdan || profile?.role === 'admin') && (
@@ -436,7 +481,7 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
                                                 )}
                                             </h4>
                                             <div className="text-[12px] text-[#5f6368] font-normal mt-1 truncate">
-                                                קטגוריות: {(exam.categories || []).map((c) => `${c.name} (${c.maxScore || c.max} נק')`).join(', ')}
+                                                קטגוריות: {(exam.categories || []).map((c) => `${c.name} (${c.maxScore ?? c.max ?? 100} נק')`).join(', ')}
                                             </div>
                                         </div>
                                         <div className="flex flex-wrap items-center gap-2 shrink-0">
@@ -504,7 +549,6 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
                 </div>
             )}
 
-
             {adminSubView === 'reports' && (
                 <div className="space-y-6">
                     <div className="bg-white p-6 rounded-[24px] border border-[#dadce0] flex gap-6 items-end flex-wrap">
@@ -525,7 +569,7 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
                             <label htmlFor="department-filter" className="text-[13px] font-medium text-[#3c4043] block mb-2 mr-1">סנן לפי מחלקה</label>
                             <select id="department-filter" aria-label="סנן לפי מחלקה" className="w-full h-10 px-3 rounded border border-[#dadce0] bg-white font-normal text-[13px] text-right text-[#3c4043] outline-none focus:border-[#1a73e8]" value={filterDept} onChange={e => setFilterDept(e.target.value)}>
                                 <option value="all">כל המחלקות</option>
-                                {[...new Set(uniqueUsersList.map(u => parseInt(u.group) || 0))].filter(g => g > 0).sort((a, b) => a - b).map(g => <option key={g} value={g.toString()}>מחלקה {g}</option>)}
+                                {[...new Set(uniqueUsersList.map(u => parseInt(String(u.group || 0), 10) || 0))].filter(g => g > 0).sort((a, b) => a - b).map(g => <option key={g} value={g.toString()}>מחלקה {g}</option>)}
                             </select>
                         </div>
                         <button onClick={handleExportCSV} className="h-10 px-6 bg-[#1a73e8] hover:bg-[#1967d2] text-white rounded-full font-medium text-[14px] flex items-center gap-2 transition-all shrink-0"><Download size={18} /> ייצוא CSV</button>
@@ -551,7 +595,8 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
                                         </tr>
                                     ) : (
                                         filteredStudents.map(student => {
-                                            const att = attendance[student.id] || attendance[student.phone] || attendance[student.firestoreId] || {};
+                                            const studentId = student.id || student.phone || student.firestoreId || '';
+                                            const att = attendance[studentId] || {};
                                             return (
                                                 <tr key={student.firestoreId || student.id || student.phone} className="hover:bg-[#f8f9fa] transition-colors group cursor-pointer" onClick={() => handleSelectStudentProfile(student)}>
                                                     <td className="p-4 font-medium text-[#1a73e8] hover:underline text-[14px]">{student.name || student.fullName}</td>
@@ -585,11 +630,15 @@ export default function AdminView({ profile, usersList, exams, grades, attendanc
                                                         );
                                                     })}
                                                     {exams.map(exam => {
-                                                        const g = grades[`${student.id}_${exam.id}`] || grades[`${student.phone}_${exam.id}`] || grades[`${student.firestoreId}_${exam.id}`];
-                                                        const total = g && g.scores ? Object.values(g.scores).reduce((a, b) => (parseInt(a) || 0) + (parseInt(b) || 0), 0) : null;
-                                                        return <td key={exam.id} className="p-4 text-center font-medium text-[16px] tabular-nums text-[#202124]">
-                                                            {total !== null ? <span className={total >= 85 ? 'text-emerald-600' : 'text-slate-900'}>{total}</span> : "--"}
-                                                        </td>;
+                                                        const g = grades[`${studentId}_${exam.id}`];
+                                                        const total: number | null = g && g.scores
+                                                            ? Object.values(g.scores as Record<string, unknown>).reduce((a: number, b: unknown) => a + (parseInt(String(b || 0), 10) || 0), 0)
+                                                            : null;
+                                                        return (
+                                                            <td key={exam.id} className="p-4 text-center font-medium text-[16px] tabular-nums text-[#202124]">
+                                                                {total !== null ? <span className={total >= 85 ? 'text-emerald-600' : 'text-slate-900'}>{total}</span> : "--"}
+                                                            </td>
+                                                        );
                                                     })}
                                                 </tr>
                                             );

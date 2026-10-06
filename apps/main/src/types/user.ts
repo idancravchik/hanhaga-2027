@@ -7,12 +7,21 @@ export interface TagCatalogItem {
     requiresDetail: boolean;
 }
 
+export interface UserTag {
+    id: string;
+    label: string;
+    detail?: string;
+}
+
 export interface UserProfile {
     id?: string;
+    firestoreId?: string;
     phone?: string;
+    name?: string;
     fullName?: string;
     role: UserRole;
+    group?: number | string;
     school?: string;
-    tags?: string[];
+    tags?: UserTag[];
     [key: string]: any;
 }

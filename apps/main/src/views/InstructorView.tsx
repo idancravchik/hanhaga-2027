@@ -1,26 +1,53 @@
-import React, { useState, useMemo } from 'react';
-import { ChevronLeft, Search, Calendar, UserCircle, BookOpen, AlertCircle, Check, X, ChevronDown, ChevronUp, Eye, Users, CalendarCheck } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { ChevronLeft, Search, Calendar, UserCircle, BookOpen, AlertCircle, ChevronDown, ChevronUp, Eye, Users, CalendarCheck } from 'lucide-react';
 import { LOGO_URL, getUserAvatar, TAGS_CATALOG, getTagColorClasses } from '../config/constants';
 import { doc, setDoc } from 'firebase/firestore';
 import { signInAnonymously } from 'firebase/auth';
 import { db, auth, appId } from '../config/firebase';
 import { MobileBottomNav } from '../components/navigation/MobileBottomNav';
+import { UserProfile, UserTag } from '../types/user';
+import { Exam, GradeRecord } from '../types/exam';
+import { CourseEvent, AttendanceMap } from '../types/event';
 
 const StudentProfileModal = React.lazy(() => import('../components/users/StudentProfileModal').then(m => ({ default: m.StudentProfileModal })));
 const AttendanceReportTable = React.lazy(() => import('../components/events/AttendanceReportTable').then(m => ({ default: m.AttendanceReportTable })));
 
-export default function InstructorView({ profile, usersList, exams, grades, attendance, notes, eventsList, setView, showToast, isMixedAssessment = false }) {
-    const [instructorSubView, setInstructorSubViewInternal] = useState('students');
-    const [selectedExam, setSelectedExamInternal] = useState(null);
-    const [selectedStudent, setSelectedStudentInternal] = useState(null);
-    const [selectedMeeting, setSelectedMeetingInternal] = useState(null);
-    const [scores, setScores] = useState({});
-    const [comment, setComment] = useState('');
-    const [searchQuery, setSearchQuery] = useState('');
-    const [expandedStudentId, setExpandedStudentId] = useState(null);
-    const [selectedStudentForModal, setSelectedStudentForModal] = useState(null);
+export interface InstructorViewProps {
+    profile: UserProfile | null;
+    usersList: UserProfile[];
+    exams: Exam[];
+    grades: Record<string, GradeRecord | any>;
+    attendance: AttendanceMap;
+    notes: Record<string, any>;
+    eventsList: CourseEvent[];
+    setView: (view: string) => void;
+    showToast: (msg: string, type?: 'success' | 'error') => void;
+    isMixedAssessment?: boolean;
+}
 
-    const handlePushState = (newSubView, examId, studentId, meeting) => {
+export default function InstructorView({
+    profile,
+    usersList,
+    exams,
+    grades,
+    attendance,
+    notes,
+    eventsList,
+    setView,
+    showToast,
+    isMixedAssessment = false
+}: InstructorViewProps) {
+    const [instructorSubView, setInstructorSubViewInternal] = useState<'students' | 'meetings'>('students');
+    const [selectedExam, setSelectedExamInternal] = useState<Exam | null>(null);
+    const [selectedStudent, setSelectedStudentInternal] = useState<(UserProfile & { isNoteMode?: boolean }) | null>(null);
+    const [selectedMeeting, setSelectedMeetingInternal] = useState<string | null>(null);
+    const [scores, setScores] = useState<Record<string, number>>({});
+    const [comment, setComment] = useState<string>('');
+    const [searchQuery, setSearchQuery] = useState<string>('');
+    const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null);
+    const [selectedStudentForModal, setSelectedStudentForModal] = useState<UserProfile | null>(null);
+
+    const handlePushState = (newSubView: 'students' | 'meetings', examId: string | null, studentId: string | null, meeting: string | null) => {
         const newState = {
             view: 'instructor',
             instructorSubView: newSubView,
@@ -31,25 +58,25 @@ export default function InstructorView({ profile, usersList, exams, grades, atte
         window.history.pushState(newState, '', '');
     };
 
-    const setInstructorSubView = (v, push = true) => {
+    const setInstructorSubView = (v: 'students' | 'meetings', push = true) => {
         setInstructorSubViewInternal(v);
         if (push) handlePushState(v, null, null, null);
     };
-    const setSelectedExam = (e, push = true) => {
+    const setSelectedExam = (e: Exam | null, push = true) => {
         setSelectedExamInternal(e);
-        if (push) handlePushState(instructorSubView, e?.id, selectedStudent?.id, selectedMeeting);
+        if (push) handlePushState(instructorSubView, e?.id || null, selectedStudent?.id || null, selectedMeeting);
     };
-    const setSelectedStudent = (s, push = true) => {
+    const setSelectedStudent = (s: (UserProfile & { isNoteMode?: boolean }) | null, push = true) => {
         setSelectedStudentInternal(s);
-        if (push) handlePushState(instructorSubView, selectedExam?.id, s?.id, selectedMeeting);
+        if (push) handlePushState(instructorSubView, selectedExam?.id || null, s?.id || null, selectedMeeting);
     };
-    const setSelectedMeeting = (m, push = true) => {
+    const setSelectedMeeting = (m: string | null, push = true) => {
         setSelectedMeetingInternal(m);
         if (push) handlePushState(instructorSubView, null, null, m);
     };
 
-    React.useEffect(() => {
-        const handlePopState = (event) => {
+    useEffect(() => {
+        const handlePopState = (event: PopStateEvent) => {
             if (event.state && event.state.view === 'instructor') {
                 setInstructorSubViewInternal(event.state.instructorSubView || 'students');
                 const exam = exams.find(e => e.id === event.state.selectedExam);
@@ -63,27 +90,32 @@ export default function InstructorView({ profile, usersList, exams, grades, atte
         return () => window.removeEventListener('popstate', handlePopState);
     }, [exams, usersList]);
 
-    const groupStudents = usersList.filter(u => (profile?.group?.toString() === '0' || isMixedAssessment || u.group?.toString() === profile?.group?.toString()) && u.role === 'student');
+    const groupStudents = useMemo(() => {
+        return usersList.filter(u => (profile?.group?.toString() === '0' || isMixedAssessment || u.group?.toString() === profile?.group?.toString()) && u.role === 'student');
+    }, [usersList, profile?.group, isMixedAssessment]);
 
     const filteredGroupStudents = useMemo(() => {
         if (!searchQuery) return groupStudents;
-        return groupStudents.filter(u => u.name?.toLowerCase().includes(searchQuery.toLowerCase()));
+        const q = searchQuery.toLowerCase();
+        return groupStudents.filter(u => (u.name || u.fullName || '').toLowerCase().includes(q));
     }, [groupStudents, searchQuery]);
 
     const attendanceEvents = useMemo(() => {
         return (eventsList || [])
-            .filter(e => e.type !== 'יום חשיפה')
-            .sort((a, b) => new Date(a.date) - new Date(b.date));
+            .filter((e: CourseEvent) => e.type !== 'יום חשיפה')
+            .sort((a: CourseEvent, b: CourseEvent) => new Date(a.date).getTime() - new Date(b.date).getTime());
     }, [eventsList]);
 
     const handleUpdateGrade = async () => {
         if (!selectedStudent || !selectedExam) return;
         const studentId = selectedStudent.id || selectedStudent.phone || selectedStudent.firestoreId;
-        const cleanedScores = {};
+        if (!studentId) return;
+
+        const cleanedScores: Record<string, number> = {};
         (selectedExam.categories || []).forEach((cat) => {
             const raw = scores[cat.name];
             const maxVal = Number(cat.maxScore ?? cat.max ?? 100);
-            const parsed = typeof raw === 'number' ? raw : parseInt(raw, 10);
+            const parsed = typeof raw === 'number' ? raw : parseInt(String(raw || 0), 10);
             cleanedScores[cat.name] = isNaN(parsed) ? 0 : Math.min(Math.max(0, parsed), maxVal);
         });
 
@@ -110,9 +142,8 @@ export default function InstructorView({ profile, usersList, exams, grades, atte
         }
     };
 
-
-
     const handleSaveNote = async () => {
+        if (!selectedStudent?.id) return;
         const payload = { studentId: selectedStudent.id, content: comment, updatedAt: new Date().toISOString() };
         try {
             if (!auth.currentUser) {
@@ -136,7 +167,7 @@ export default function InstructorView({ profile, usersList, exams, grades, atte
                     <div className="flex items-center gap-3 mb-4 mt-2">
                         <img src={getUserAvatar(selectedStudent.role)} alt={selectedStudent.role} className="w-12 h-12 rounded-full border border-[#dadce0] object-cover" />
                         <div>
-                            <h3 className="text-[20px] font-medium text-[#202124] leading-tight">{selectedStudent.name}</h3>
+                            <h3 className="text-[20px] font-medium text-[#202124] leading-tight">{selectedStudent.name || selectedStudent.fullName}</h3>
                             <p className="text-[#5f6368] text-[12px] font-normal mt-1">מחלקה {selectedStudent.group} | {selectedStudent.school}</p>
                         </div>
                     </div>
@@ -161,7 +192,7 @@ export default function InstructorView({ profile, usersList, exams, grades, atte
                                 שמור תיק אישי
                             </button>
                         </div>
-                    ) : (
+                    ) : selectedExam ? (
                         <>
                             <p className="text-[#5f6368] text-[12px] mb-4 font-medium uppercase tracking-wider">{selectedExam.title}</p>
                             <div className="space-y-4">
@@ -202,14 +233,14 @@ export default function InstructorView({ profile, usersList, exams, grades, atte
                                 <button onClick={handleUpdateGrade} className="w-full h-10 bg-[#1a73e8] hover:bg-[#1967d2] text-white font-medium rounded-full transition-all text-[14px]">עדכן נתונים</button>
                             </div>
                         </>
-                    )}
+                    ) : null}
                 </div>
             </div>
         );
     }
 
     if (selectedMeeting) {
-        const currentEvent = eventsList.find(e => e.id === selectedMeeting) || { id: selectedMeeting, title: selectedMeeting, type: 'מפגש', date: '' };
+        const currentEvent = eventsList.find(e => e.id === selectedMeeting) || { id: selectedMeeting, title: selectedMeeting, type: 'מפגש' as const, date: '' };
         return (
             <div className="p-4 sm:p-6 max-w-7xl mx-auto w-full font-sans pb-20 text-right text-[#202124]" dir="rtl">
                 <button onClick={() => setSelectedMeetingInternal(null)} className="mb-4 flex items-center text-[#1a73e8] font-medium text-[14px] gap-1 hover:underline"><ChevronLeft size={16} /> חזרה למפגשים</button>
@@ -232,9 +263,9 @@ export default function InstructorView({ profile, usersList, exams, grades, atte
                 <div className="flex items-center gap-3">
                     <img src={LOGO_URL} className="w-9 h-9 sm:w-10 sm:h-10 object-contain" alt="Logo" />
                     <div className="w-px h-6 bg-[#dadce0]" />
-                    <img src={getUserAvatar(profile?.role)} alt={profile?.role} className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-[#dadce0] object-cover" />
+                    <img src={getUserAvatar(profile?.role || 'instructor')} alt={profile?.role || 'instructor'} className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-[#dadce0] object-cover" />
                     <div>
-                        <h2 className="text-[17px] sm:text-[20px] font-medium text-[#202124] leading-tight">{profile?.name}</h2>
+                        <h2 className="text-[17px] sm:text-[20px] font-medium text-[#202124] leading-tight">{profile?.name || profile?.fullName}</h2>
                         <p className="text-[#1a73e8] font-medium text-[12px] mt-1 leading-none">{profile?.role === 'assistant' ? 'מנהלן' : (profile?.group?.toString() === '0' ? 'מדריך כללי' : `מחלקה ${profile?.group}`)}</p>
                     </div>
                 </div>
@@ -263,10 +294,10 @@ export default function InstructorView({ profile, usersList, exams, grades, atte
 
                     <div className="space-y-3">
                         {filteredGroupStudents.map(student => {
-                            const studentKey = student.id || student.phone || student.firestoreId;
+                            const studentKey = student.id || student.phone || student.firestoreId || '';
                             const isExpanded = expandedStudentId === studentKey;
                             const studentTags = student.tags || [];
-                            const studentNote = notes[student.id]?.content || notes[student.phone]?.content || notes[student.firestoreId]?.content || '';
+                            const studentNote = notes[student.id || '']?.content || notes[student.phone || '']?.content || notes[student.firestoreId || '']?.content || '';
 
                             return (
                                 <div key={studentKey} className="bg-white rounded-[24px] border border-[#dadce0] text-right overflow-hidden transition-all">
@@ -276,9 +307,9 @@ export default function InstructorView({ profile, usersList, exams, grades, atte
                                         className="p-4 flex items-center justify-between cursor-pointer hover:bg-[#f8f9fa] transition-colors"
                                     >
                                         <div className="flex items-center gap-3">
-                                            <img src={getUserAvatar(student.role)} alt={student.name} className="w-10 h-10 rounded-full border border-[#dadce0] object-cover" />
+                                            <img src={getUserAvatar(student.role)} alt={student.name || student.fullName || ''} className="w-10 h-10 rounded-full border border-[#dadce0] object-cover" />
                                             <div>
-                                                <h3 className="text-[16px] font-medium text-[#202124] leading-tight">{student.name}</h3>
+                                                <h3 className="text-[16px] font-medium text-[#202124] leading-tight">{student.name || student.fullName}</h3>
                                                 <p className="text-[#5f6368] text-[12px] font-normal mt-0.5">מחלקה {student.group || 0} | {student.school || 'לא שויך'}</p>
                                             </div>
                                         </div>
@@ -301,8 +332,8 @@ export default function InstructorView({ profile, usersList, exams, grades, atte
                                         <div className="p-4 border-t border-[#dadce0] space-y-4 bg-[#f8f9fa]">
                                             {studentTags.length > 0 && (
                                                 <div className="flex flex-wrap gap-1.5">
-                                                    {studentTags.map((tag, idx) => {
-                                                        const tagDef = TAGS_CATALOG.find(t => t.id === tag.id);
+                                                    {studentTags.map((tag: UserTag, idx: number) => {
+                                                        const tagDef = TAGS_CATALOG.find((t: any) => t.id === tag.id);
                                                         const badgeClass = getTagColorClasses(tagDef?.color);
                                                         return (
                                                             <span key={idx} className={`px-2.5 py-0.5 rounded-full text-[12px] font-normal border border-[#dadce0] bg-white text-[#3c4043] ${badgeClass}`}>
@@ -317,9 +348,12 @@ export default function InstructorView({ profile, usersList, exams, grades, atte
                                                 {exams
                                                     .filter(e => profile?.role === 'assistant' ? e.isAssistantVisible : e.isVisible)
                                                     .map(exam => {
-                                                        const g = grades[`${student.id}_${exam.id}`] || grades[`${student.phone}_${exam.id}`] || grades[`${student.firestoreId}_${exam.id}`];
-                                                        const total = g ? Object.values(g.scores || {}).reduce((a, b) => (parseInt(a) || 0) + (parseInt(b) || 0), 0) : null;
-                                                        const isGraded = total !== null && total > 0;
+                                                        const gradeKey = student.id || student.phone || student.firestoreId || '';
+                                                        const g = grades[`${gradeKey}_${exam.id}`];
+                                                        const total: number | null = (g && g.scores)
+                                                            ? Object.values(g.scores as Record<string, unknown>).reduce((acc: number, val: unknown) => acc + (Number(val) || 0), 0)
+                                                            : null;
+                                                        const isGraded = typeof total === 'number' && total > 0;
 
                                                         return (
                                                             <button
@@ -328,7 +362,7 @@ export default function InstructorView({ profile, usersList, exams, grades, atte
                                                                     setSelectedExam(exam);
                                                                     setSelectedStudent(student);
                                                                     setScores(g?.scores || {});
-                                                                    setComment(g?.comment || '');
+                                                                    setComment(g?.comment || g?.verbalComment || '');
                                                                 }}
                                                                 className={`p-3 rounded-lg border text-right transition-all flex flex-col justify-between h-20 ${isGraded ? 'bg-[#e8f0fe] border-[#1a73e8]/30 text-[#202124]' : 'bg-white border-[#dadce0] text-[#3c4043]'}`}
                                                             >
@@ -423,4 +457,4 @@ export default function InstructorView({ profile, usersList, exams, grades, atte
             )}
         </div>
     );
-};
+}
