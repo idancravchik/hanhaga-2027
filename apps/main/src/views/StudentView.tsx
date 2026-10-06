@@ -1,16 +1,28 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { ChevronLeft, UserCircle, Calendar, GraduationCap, Layers } from 'lucide-react';
 import { LOGO_URL, getUserAvatar, TAGS_CATALOG, getTagColorClasses } from '../config/constants';
 import { StudentGradesView } from '../components/exams/StudentGradesView';
 import { StudentScheduleView } from '../components/events/StudentScheduleView';
 import { MobileBottomNav } from '../components/navigation/MobileBottomNav';
+import { UserProfile, UserTag } from '../types/user';
+import { Exam, GradeRecord } from '../types/exam';
+import { CourseEvent, AttendanceMap } from '../types/event';
 
-export default function StudentView({ profile, exams, grades, attendance, eventsList, setView }) {
-    const [selectedExam, setSelectedExamInternal] = useState(null);
-    const [mobileTab, setMobileTab] = useState('all');
+export interface StudentViewProps {
+    profile: UserProfile | null;
+    exams: Exam[];
+    grades: Record<string, GradeRecord>;
+    attendance: AttendanceMap;
+    eventsList: CourseEvent[];
+    setView: (view: string) => void;
+}
 
-    React.useEffect(() => {
-        const handlePopState = (event) => {
+export default function StudentView({ profile, exams, grades, attendance, eventsList, setView }: StudentViewProps) {
+    const [selectedExam, setSelectedExamInternal] = useState<Exam | null>(null);
+    const [mobileTab, setMobileTab] = useState<'all' | 'schedule' | 'grades'>('all');
+
+    useEffect(() => {
+        const handlePopState = (event: PopStateEvent) => {
             if (event.state && event.state.subView === 'exam_detail') {
                 const exam = exams.find(e => e.id === event.state.examId);
                 setSelectedExamInternal(exam || null);
@@ -22,24 +34,24 @@ export default function StudentView({ profile, exams, grades, attendance, events
         return () => window.removeEventListener('popstate', handlePopState);
     }, [exams]);
 
-    const handleSelectExam = (exam) => {
+    const handleSelectExam = (exam: Exam | null) => {
         setSelectedExamInternal(exam);
         window.history.pushState({ view: 'student', subView: exam ? 'exam_detail' : null, examId: exam?.id }, '', '');
     };
 
     const _attendanceEvents = useMemo(() => {
         return (eventsList || [])
-            .filter(e => e.type !== 'יום חשיפה')
-            .sort((a, b) => new Date(a.date) - new Date(b.date));
+            .filter((e: CourseEvent) => e.type !== 'יום חשיפה')
+            .sort((a: CourseEvent, b: CourseEvent) => new Date(a.date).getTime() - new Date(b.date).getTime());
     }, [eventsList]);
 
-    const visibleTags = useMemo(() => {
-        return (profile?.tags || []).filter(t => t.id !== 'special_ed' && t.id !== 'school_sole' && t.label !== 'חנ"מ' && t.label !== 'בודד מבית ספר');
+    const visibleTags = useMemo<UserTag[]>(() => {
+        return (profile?.tags || []).filter((t: UserTag) => t.id !== 'special_ed' && t.id !== 'school_sole' && t.label !== 'חנ"מ' && t.label !== 'בודד מבית ספר');
     }, [profile?.tags]);
 
     if (selectedExam) {
-        const g = grades[`${profile?.id}_${selectedExam.id}`];
-        const total = g ? Object.values(g?.scores || {}).reduce((a, b) => (parseInt(a) || 0) + (parseInt(b) || 0), 0) : null;
+        const g = profile?.id ? grades[`${profile.id}_${selectedExam.id}`] : undefined;
+        const total = g && g.scores ? Object.values(g.scores).reduce((a: number, b: number) => (Number(a) || 0) + (Number(b) || 0), 0) : null;
         return (
             <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto w-full font-sans pb-20 text-right text-[#202124]" dir="rtl">
                 <button onClick={() => handleSelectExam(null)} className="mb-6 flex items-center text-[#1a73e8] font-medium hover:underline gap-1 text-[14px]">
@@ -74,7 +86,7 @@ export default function StudentView({ profile, exams, grades, attendance, events
                                 )}
                                 <div className={selectedExam.isStudentVisible ? "mt-6" : ""}>
                                     <h4 className="font-medium text-[#3c4043] mb-2 text-[14px]">דבר המדריך:</h4>
-                                    <p className="bg-[#f8f9fa] p-5 rounded-[16px] border border-[#dadce0] text-[#3c4043] leading-relaxed font-normal text-[15px]">"{g.comment || "ביצוע טוב מאוד!"}"</p>
+                                    <p className="bg-[#f8f9fa] p-5 rounded-[16px] border border-[#dadce0] text-[#3c4043] leading-relaxed font-normal text-[15px]">"{g.verbalComment || (g as any).comment || "ביצוע טוב מאוד!"}"</p>
                                 </div>
                             </>
                         ) : <div className="text-center py-16 italic text-[#3c4043] font-normal">הציון עדיין בעיבוד...</div>}
@@ -91,15 +103,15 @@ export default function StudentView({ profile, exams, grades, attendance, events
                     <div className="flex items-center gap-3">
                         <img src={LOGO_URL} className="w-10 h-10 object-contain" alt="Logo" />
                         <div className="w-px h-6 bg-[#dadce0]" />
-                        <img src={getUserAvatar(profile?.role)} alt={profile?.role} className="w-10 h-10 rounded-full border border-[#dadce0] object-cover" />
+                        <img src={getUserAvatar(profile?.role || 'student')} alt={profile?.role || 'student'} className="w-10 h-10 rounded-full border border-[#dadce0] object-cover" />
                         <div>
-                            <h2 className="text-[20px] font-medium text-[#202124] leading-tight">שלום, {profile?.name}</h2>
+                            <h2 className="text-[20px] font-medium text-[#202124] leading-tight">שלום, {profile?.name || profile?.fullName}</h2>
                             <p className="text-[#1a73e8] font-medium text-[12px] mt-1 leading-none">מחלקה {profile?.group}</p>
                             
                             {visibleTags.length > 0 && (
                                 <div className="flex flex-wrap gap-1.5 mt-2.5">
-                                    {visibleTags.map((tag, idx) => {
-                                        const tagDef = TAGS_CATALOG.find(t => t.id === tag.id);
+                                    {visibleTags.map((tag: UserTag, idx: number) => {
+                                        const tagDef = TAGS_CATALOG.find((t: any) => t.id === tag.id);
                                         const badgeClass = getTagColorClasses(tagDef?.color);
                                         return (
                                             <span key={idx} className={`px-2.5 py-0.5 rounded-full text-[12px] font-normal border border-[#dadce0] bg-[#f8f9fa] text-[#3c4043] ${badgeClass}`}>

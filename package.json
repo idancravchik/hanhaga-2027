@@ -5,6 +5,7 @@
   "description": "Unified Hanhaga Portal & Applications",
   "type": "module",
   "scripts": {
+    "dev": "npm run dev --prefix apps/main",
     "install:all": "npm install --prefix apps/main && npm install --prefix functions",
     "build:main": "npm run build --prefix apps/main",
     "build:api": "npm run build --prefix functions",

@@ -1,6 +1,7 @@
 export interface ExamCategory {
     name: string;
     maxScore: number;
+    max?: number;
 }
 
 export interface Exam {
@@ -9,6 +10,9 @@ export interface Exam {
     date?: string;
     categories: ExamCategory[];
     showVerbalOnly?: boolean;
+    isStudentVisible?: boolean;
+    isVisible?: boolean;
+    isAssistantVisible?: boolean;
 }
 
 export interface GradeRecord {
