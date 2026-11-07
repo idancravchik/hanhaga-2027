@@ -1,0 +1,472 @@
+/* ==========================================================================
+   Design Tokens & CSS Variables (Identical to Main App / Google for Education)
+   ========================================================================== */
+:root {
+  /* Colors */
+  --color-canvas-white: #f8f9fa;
+  --color-charcoal-ink: #202124;
+  --color-graphite: #3c4043;
+  --color-slate: #5f6368;
+  --color-mist: #dadce0;
+  --color-cloud-shadow: #c4c6c7;
+  --color-google-blue: #1a73e8;
+  --color-google-blue-deep: #1967d2;
+  --color-classroom-green: #188038;
+  --color-danger-red: #d93025;
+  --color-surface-card: #ffffff;
+  --color-surface-tint: #e8f0fe;
+
+  /* Typography */
+  --font-family-display: 'Google Sans Display', 'Google Sans', 'Open Sans', 'Assistant', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-family-body: 'Google Sans Text', 'Google Sans', 'Open Sans', 'Assistant', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Sizing & Radius */
+  --radius-card: 24px;
+  --radius-camera: 16px;
+  --radius-input: 12px;
+  --radius-pill: 200px;
+}
+
+/* ==========================================================================
+   Reset & Viewport Containment (Strictly NO Scrollbars)
+   ========================================================================== */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* Strict requirement: no scroll on page */
+  font-family: var(--font-family-body);
+  color: var(--color-charcoal-ink);
+  background-color: var(--color-canvas-white);
+  background-image: url('../hiking-bg.jpg'), url('hiking-bg.jpg'), url('/hiking-bg.jpg');
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  direction: rtl;
+}
+
+@media (max-width: 640px) {
+  html, body {
+    background-image: url('../hiking-bg-mobile.jpg'), url('hiking-bg-mobile.jpg'), url('/hiking-bg-mobile.jpg');
+    background-size: cover;
+    background-position: center center;
+    background-attachment: scroll;
+  }
+}
+
+/* ==========================================================================
+   Layout Shell
+   ========================================================================== */
+.app-container {
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  overflow: hidden;
+}
+
+/* ==========================================================================
+   Main Card Surface (Google for Education Card)
+   ========================================================================== */
+.card-wrapper {
+  width: 100%;
+  max-width: 520px;
+  height: 100%;
+  max-height: min(720px, calc(100dvh - 24px));
+  background-color: var(--color-surface-card);
+  border: 1px solid var(--color-mist);
+  border-radius: var(--radius-card);
+  box-shadow: 0 1px 3px rgba(60, 64, 67, 0.08), 0 4px 12px rgba(60, 64, 67, 0.05);
+  display: flex;
+  flex-direction: column;
+  padding: 18px 22px;
+  position: relative;
+  overflow: hidden;
+}
+
+@media (max-height: 640px) {
+  .card-wrapper {
+    padding: 12px 16px;
+    max-height: calc(100dvh - 12px);
+  }
+}
+
+/* ==========================================================================
+   Header Section
+   ========================================================================== */
+.header-section {
+  flex-shrink: 0;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.main-title {
+  font-family: var(--font-family-display);
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--color-charcoal-ink);
+  letter-spacing: -0.3px;
+  line-height: 1.25;
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 13.5px;
+  color: var(--color-slate);
+  margin-top: 4px;
+  line-height: 1.4;
+  font-weight: 400;
+}
+
+@media (max-height: 640px) {
+  .header-section {
+    margin-bottom: 8px;
+  }
+  .main-title {
+    font-size: 20px;
+  }
+  .subtitle {
+    font-size: 12.5px;
+    margin-top: 2px;
+  }
+}
+
+/* ==========================================================================
+   Google Material Searchable Combobox
+   ========================================================================== */
+.selector-section {
+  flex-shrink: 0;
+  margin-bottom: 12px;
+  position: relative;
+}
+
+.combobox-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.combobox-input {
+  width: 100%;
+  height: 42px;
+  border: 1px solid var(--color-mist);
+  border-radius: var(--radius-input);
+  background-color: #ffffff;
+  color: var(--color-charcoal-ink);
+  font-family: var(--font-family-body);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 0 16px 0 36px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.combobox-input::placeholder {
+  color: var(--color-slate);
+  font-weight: 400;
+}
+
+.combobox-input:hover {
+  border-color: #bdc1c6;
+}
+
+.combobox-input:focus,
+.combobox-wrapper.active .combobox-input {
+  border-color: var(--color-google-blue);
+  box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.15);
+}
+
+.combobox-arrow {
+  position: absolute;
+  left: 14px;
+  color: var(--color-slate);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  transition: transform 0.2s ease;
+}
+
+.combobox-wrapper.active .combobox-arrow {
+  transform: rotate(180deg);
+  color: var(--color-google-blue);
+}
+
+/* Floating Dropdown List */
+.combobox-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  max-height: 190px;
+  overflow-y: auto;
+  background-color: #ffffff;
+  border: 1px solid var(--color-mist);
+  border-radius: var(--radius-input);
+  box-shadow: 0 4px 16px rgba(60, 64, 67, 0.16);
+  z-index: 100;
+  list-style: none;
+  padding: 4px 0;
+  margin: 0;
+  display: none;
+}
+
+.combobox-dropdown.open {
+  display: block;
+}
+
+.combobox-option {
+  padding: 9px 16px;
+  font-size: 14px;
+  color: var(--color-charcoal-ink);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background-color 0.15s ease;
+}
+
+.combobox-option:hover,
+.combobox-option.highlighted {
+  background-color: var(--color-canvas-white);
+}
+
+.combobox-option.selected {
+  background-color: var(--color-surface-tint);
+  color: var(--color-google-blue);
+  font-weight: 600;
+}
+
+.combobox-option-group {
+  font-size: 12px;
+  color: var(--color-slate);
+  font-weight: 400;
+}
+
+.combobox-no-results {
+  padding: 12px 16px;
+  font-size: 13.5px;
+  color: var(--color-slate);
+  text-align: center;
+}
+
+@media (max-height: 640px) {
+  .selector-section {
+    margin-bottom: 8px;
+  }
+  .combobox-input {
+    height: 38px;
+    font-size: 13px;
+  }
+  .combobox-dropdown {
+    max-height: 140px;
+  }
+}
+
+/* ==========================================================================
+   Clean White Camera Rectangle with Camera Feed in Middle
+   ========================================================================== */
+.camera-container {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  background-color: #ffffff; /* Clean white rectangle */
+  border: 1px solid var(--color-mist);
+  border-radius: var(--radius-camera);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  box-shadow: inset 0 1px 2px rgba(60, 64, 67, 0.05);
+}
+
+/* Camera Video Feed & Capture Canvas (Centered in Middle) */
+.camera-video,
+.camera-canvas {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
+  transform: scaleX(-1); /* Mirror camera for natural selfie orientation */
+  background-color: #f1f3f4;
+  display: block;
+}
+
+/* Shutter Flash Effect */
+.camera-flash {
+  position: absolute;
+  inset: 0;
+  background-color: #ffffff;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 10;
+  transition: opacity 0.08s ease-out;
+}
+
+.camera-flash.active {
+  opacity: 1;
+}
+
+/* ==========================================================================
+   Action Buttons Section (Underneath Camera)
+   ========================================================================== */
+.actions-section {
+  flex-shrink: 0;
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.btn {
+  flex: 1;
+  height: 42px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-family-body);
+  font-size: 14px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+  border: none;
+}
+
+/* Secondary Capture Button (Ghost Pill) */
+.btn-capture {
+  background-color: #ffffff;
+  color: var(--color-google-blue);
+  border: 1px solid var(--color-mist);
+}
+
+.btn-capture:hover {
+  background-color: var(--color-canvas-white);
+  border-color: var(--color-google-blue);
+}
+
+.btn-capture:active {
+  transform: scale(0.98);
+}
+
+/* Primary Confirm Button (Toggles between Disabled/Muted and Active Google Blue) */
+.btn-approve {
+  background-color: var(--color-google-blue);
+  color: #ffffff;
+  box-shadow: 0 1px 2px rgba(60, 64, 67, 0.3), 0 1px 3px rgba(60, 64, 67, 0.15);
+}
+
+.btn-approve:hover:not(:disabled) {
+  background-color: var(--color-google-blue-deep);
+  box-shadow: 0 2px 4px rgba(60, 64, 67, 0.3), 0 2px 6px rgba(60, 64, 67, 0.2);
+}
+
+.btn-approve:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* Disabled State: Off / Muted until a photo is captured */
+.btn-approve:disabled {
+  background-color: #f1f3f4;
+  color: #80868b;
+  border: 1px solid var(--color-mist);
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.75;
+  transform: none;
+}
+
+.btn:disabled:not(.btn-approve) {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+@media (max-height: 640px) {
+  .actions-section {
+    margin-top: 8px;
+    gap: 8px;
+  }
+  .btn {
+    height: 38px;
+    font-size: 13px;
+  }
+}
+
+/* ==========================================================================
+   Toast Notification System (Identical to Main App Toast.tsx)
+   ========================================================================== */
+.toast-container {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-20px);
+  z-index: 1000;
+  pointer-events: none;
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toast-container.show {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+.toast-bubble {
+  padding: 10px 22px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-mist);
+  background-color: #ffffff;
+  color: var(--color-charcoal-ink);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 14px rgba(60, 64, 67, 0.18);
+}
+
+.toast-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.toast-icon.success {
+  color: var(--color-classroom-green);
+}
+
+.toast-icon.error {
+  color: var(--color-danger-red);
+}
+
+.toast-icon.info {
+  color: var(--color-google-blue);
+}
+
+.toast-message {
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+}

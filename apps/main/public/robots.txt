@@ -1,0 +1,34 @@
+# Robots.txt for Hanhaga 2027 Portal
+# Only index the main portal landing page
+
+User-agent: *
+Allow: /$
+Disallow: /forms/
+Disallow: /manage/
+Disallow: /mashabim/
+Disallow: /game
+Disallow: /game/
+Disallow: /api/
+Disallow: /*?*
+
+User-agent: Googlebot
+Allow: /$
+Disallow: /forms/
+Disallow: /manage/
+Disallow: /mashabim/
+Disallow: /game
+Disallow: /game/
+Disallow: /api/
+Disallow: /*?*
+
+User-agent: Google-Extended
+Allow: /$
+Disallow: /forms/
+Disallow: /manage/
+Disallow: /mashabim/
+Disallow: /game
+Disallow: /game/
+Disallow: /api/
+Disallow: /*?*
+
+Sitemap: https://hanhaga-2027.web.app/sitemap.xml
