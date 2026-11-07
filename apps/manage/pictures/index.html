@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>צילום מתמיינים</title>
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <meta name="googlebot" content="noindex, nofollow, noarchive" />
+
+    <!-- Google Fonts & Fallbacks matching Main App -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700&family=Google+Sans:wght@400;500;700&family=Inter:wght@400;500;600&family=Open+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="css/style.css" />
+
+    <style>
+      /* Fallback to guarantee background image loads in all environments */
+      html, body {
+        background-color: #f8f9fa;
+        background-image: url('hiking-bg.jpg'), url('../hiking-bg.jpg'), url('/hiking-bg.jpg');
+        background-size: cover;
+        background-position: center top;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+      }
+      @media (max-width: 640px) {
+        html, body {
+          background-image: url('hiking-bg-mobile.jpg'), url('../hiking-bg-mobile.jpg'), url('/hiking-bg-mobile.jpg');
+          background-size: cover;
+          background-position: center center;
+          background-attachment: scroll;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- App Container (Constrained Viewport, Zero Scrolling) -->
+    <main class="app-container">
+      <div class="card-wrapper" role="region" aria-label="ממשק צילום מתמיינים">
+        
+        <!-- Header Section -->
+        <header class="header-section">
+          <h1 class="main-title">צילום מתמיינים</h1>
+          <p class="subtitle">
+            תחברו את השם של המתמיין ותצלמו מקדימה כולל כל הפנים וכתפיים
+          </p>
+        </header>
+
+        <!-- Searchable Combobox Section -->
+        <section class="selector-section">
+          <div id="comboboxWrapper" class="combobox-wrapper">
+            <input
+              id="candidateSearchInput"
+              class="combobox-input"
+              type="text"
+              placeholder="חפש מתמיין מהרשימה..."
+              autocomplete="off"
+              aria-label="חיפוש מתמיין"
+              aria-expanded="false"
+              aria-haspopup="listbox"
+            />
+
+            <span class="combobox-arrow" aria-hidden="true">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </span>
+
+            <!-- Dropdown Options List -->
+            <ul
+              id="candidateDropdownList"
+              class="combobox-dropdown"
+              role="listbox"
+              aria-label="רשימת מתמיינים"
+            >
+              <!-- Populated dynamically via TypeScript -->
+            </ul>
+          </div>
+        </section>
+
+        <!-- Clean White Rectangle with Camera Feed in Middle -->
+        <section
+          id="cameraContainer"
+          class="camera-container"
+          aria-label="תצוגת מצלמה"
+        >
+          <!-- Live Video Stream -->
+          <video
+            id="cameraVideo"
+            class="camera-video"
+            autoplay
+            playsinline
+            muted
+          ></video>
+
+          <!-- Captured Photo Display Canvas -->
+          <canvas
+            id="cameraCanvas"
+            class="camera-canvas"
+            style="display: none"
+          ></canvas>
+
+          <!-- Shutter Flash Layer -->
+          <div id="cameraFlash" class="camera-flash" aria-hidden="true"></div>
+        </section>
+
+        <!-- Actions Section (Capture & Confirm Buttons) -->
+        <footer class="actions-section">
+          <button id="captureBtn" class="btn btn-capture" type="button">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
+              ></path>
+              <circle cx="12" cy="13" r="4"></circle>
+            </svg>
+            <span id="captureBtnText">צילום</span>
+          </button>
+
+          <!-- Confirm Button (Starts Disabled, Switches to Blue When Photo is Captured) -->
+          <button id="approveBtn" class="btn btn-approve" type="button" disabled>
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <span>אישור</span>
+          </button>
+        </footer>
+
+      </div>
+    </main>
+
+    <!-- Toast Notification (Identical to Main App Toast.tsx) -->
+    <aside
+      id="toastContainer"
+      class="toast-container"
+      role="status"
+      aria-live="polite"
+    >
+      <div class="toast-bubble">
+        <span id="toastIcon" class="toast-icon success">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+        </span>
+        <span id="toastMessage" class="toast-message"></span>
+      </div>
+    </aside>
+
+    <!-- TypeScript Only -->
+    <script type="module" src="ts/main.ts"></script>
+  </body>
+</html>
