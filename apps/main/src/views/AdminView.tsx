@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
     Users, Plus, GraduationCap,
     FileText, Download, Trash2,
-    Edit2, Search, Check, Eye, EyeOff, PieChart, TrendingUp, X, BarChart3, Lock, Unlock, Calendar, MessageSquare, KeyRound, Smartphone
+    Edit2, Search, Check, Eye, EyeOff, PieChart, TrendingUp, X, BarChart3, Lock, Unlock, Calendar, MessageSquare, KeyRound, Smartphone, Megaphone
 } from 'lucide-react';
 import { doc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db, appId } from '../config/firebase';
@@ -20,6 +20,8 @@ const ExamBuilderModal = React.lazy(() => import('../components/exams/ExamBuilde
 const GradeEntryModal = React.lazy(() => import('../components/exams/GradeEntryModal').then(m => ({ default: m.GradeEntryModal })));
 const EventBuilderModal = React.lazy(() => import('../components/events/EventBuilderModal').then(m => ({ default: m.EventBuilderModal })));
 const AttendanceReportTable = React.lazy(() => import('../components/events/AttendanceReportTable').then(m => ({ default: m.AttendanceReportTable })));
+const BulletinEditorModal = React.lazy(() => import('../components/bulletin/BulletinEditorModal').then(m => ({ default: m.BulletinEditorModal })));
+import { BulletinBoardBanner } from '../components/bulletin/BulletinBoardBanner';
 
 export interface SiteSettings {
     isSiteClosed?: boolean;
@@ -69,6 +71,7 @@ export default function AdminView({
     const [isEventModalOpen, setIsEventModalOpen] = useState(false);
     const [eventToEdit, setEventToEdit] = useState<CourseEvent | null>(null);
     const [selectedAttendanceEvent, setSelectedAttendanceEvent] = useState<CourseEvent | null>(null);
+    const [isBulletinModalOpen, setIsBulletinModalOpen] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handlePushState = (newSubView: AdminSubView, studentId: string | null) => {
@@ -214,6 +217,17 @@ export default function AdminView({
                 </div>
                 <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap">
                     {(isIdan || profile?.role === 'admin') && (
+                        <button
+                            onClick={() => setIsBulletinModalOpen(true)}
+                            className="h-9 px-3.5 rounded-full transition-colors bg-[#e8f0fe] hover:bg-[#d2e3fc] text-[#1a73e8] border border-[#d2e3fc] flex items-center gap-1.5 font-medium text-[13px] shadow-2xs hover:shadow-xs"
+                            title="ערוך לוח מודעות ועדכונים (חניכים ומדריכים)"
+                            aria-label="ערוך לוח מודעות ועדכונים"
+                        >
+                            <Megaphone size={16} />
+                            <span>לוח מודעות</span>
+                        </button>
+                    )}
+                    {(isIdan || profile?.role === 'admin') && (
                         <>
                             <button
                                 onClick={async () => {
@@ -243,6 +257,12 @@ export default function AdminView({
                     <button onClick={() => setView('login')} className="h-9 px-4 rounded-full text-[#991b1b] font-semibold bg-[#fee2e2] hover:bg-[#fecaca] transition-colors text-[13px]">התנתק</button>
                 </div>
             </header>
+
+            <BulletinBoardBanner
+                boardId="instructors"
+                showEditButton={true}
+                onEditClick={() => setIsBulletinModalOpen(true)}
+            />
 
             {/* Admin Subview Navigation Bar (Desktop / Tablet only) */}
             <div className="hidden sm:flex w-full bg-white p-1 rounded-full border border-[#dadce0] gap-1 overflow-x-auto no-scrollbar shrink-0">
@@ -278,7 +298,15 @@ export default function AdminView({
                                 onClose={() => setSelectedAttendanceEvent(null)}
                                 showToast={showToast}
                             />
-                        </React.Suspense>
+                            {isBulletinModalOpen && (
+                    <BulletinEditorModal
+                        isOpen={isBulletinModalOpen}
+                        onClose={() => setIsBulletinModalOpen(false)}
+                        showToast={showToast}
+                        currentUserName={profile.name || profile.fullName}
+                    />
+                )}
+            </React.Suspense>
                     ) : (
                         <div className="bg-white rounded-[24px] overflow-hidden border border-[#dadce0]">
                             <div className="divide-y divide-[#dadce0]">

@@ -27,18 +27,34 @@ function copyDirRecursive(src, dest) {
   }
 }
 
+function emptyDirRecursive(dirPath) {
+  if (!fs.existsSync(dirPath)) return;
+  for (const entry of fs.readdirSync(dirPath, { withFileTypes: true })) {
+    const fullPath = path.join(dirPath, entry.name);
+    if (entry.isDirectory()) {
+      emptyDirRecursive(fullPath);
+      try {
+        fs.rmdirSync(fullPath);
+      } catch {
+        // ignore if locked by OneDrive
+      }
+    } else {
+      fs.unlinkSync(fullPath);
+    }
+  }
+}
+
 console.log('🚀 [1/5] Building apps/main...');
 execSync('npm run build', {
   cwd: path.join(rootDir, 'apps', 'main'),
   stdio: 'inherit'
 });
 
-console.log('🧹 [2/5] Preparing public directory...');
+console.log('🧹 [2/5] Preparing public directory (non-destructive sync)...');
 const publicDir = path.join(rootDir, 'public');
-if (fs.existsSync(publicDir)) {
-  fs.rmSync(publicDir, { recursive: true, force: true });
+if (!fs.existsSync(publicDir)) {
+  fs.mkdirSync(publicDir, { recursive: true });
 }
-fs.mkdirSync(publicDir, { recursive: true });
 
 console.log('📦 [3/5] Copying apps/main/dist to public/...');
 const mainDistDir = path.join(rootDir, 'apps', 'main', 'dist');

@@ -4,6 +4,7 @@ import { LOGO_URL, getUserAvatar, TAGS_CATALOG, getTagColorClasses } from '../co
 import { StudentGradesView } from '../components/exams/StudentGradesView';
 import { StudentScheduleView } from '../components/events/StudentScheduleView';
 import { MobileBottomNav } from '../components/navigation/MobileBottomNav';
+import { BulletinBoardBanner } from '../components/bulletin/BulletinBoardBanner';
 import { UserProfile, UserTag } from '../types/user';
 import { Exam, GradeRecord } from '../types/exam';
 import { CourseEvent, AttendanceMap } from '../types/event';
@@ -126,6 +127,8 @@ export default function StudentView({ profile, exams, grades, attendance, events
                     <button onClick={() => setView('login')} title="התנתקות" aria-label="התנתקות מהמערכת" className="bg-[#f1f3f4] hover:bg-[#e8eaed] p-2.5 rounded-full text-[#3c4043] transition-all"><UserCircle size={22} aria-hidden="true" /></button>
                 </div>
             </header>
+
+            <BulletinBoardBanner boardId="students" />
 
             {(mobileTab === 'all' || mobileTab === 'schedule') && (
                 <div className="mb-6">

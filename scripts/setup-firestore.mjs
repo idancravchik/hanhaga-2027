@@ -39,23 +39,10 @@ async function run() {
     }
   }
 
-  // 1. Update Firestore Rules via REST API
+  // 1. Update Firestore Rules via REST API using the authoritative firestore.rules file
   console.log('📜 Updating Firestore security rules via REST API...');
-  const rulesContent = `rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-    match /artifacts/{appId}/public/config {
-      allow read: if true;
-      allow write: if isAuthenticated();
-    }
-    match /artifacts/{appId}/public/data/{document=**} {
-      allow read, write: if isAuthenticated();
-    }
-  }
-}`;
+  const rulesPath = path.resolve(process.cwd(), 'firestore.rules');
+  const rulesContent = fs.readFileSync(rulesPath, 'utf8');
 
   const rulesetRes = await fetch('https://firebaserules.googleapis.com/v1/projects/hanhaga-2027/rulesets', {
     method: 'POST',

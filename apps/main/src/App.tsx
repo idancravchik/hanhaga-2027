@@ -26,7 +26,7 @@ const ViewSkeleton: React.FC = () => (
 );
 
 const AppContent: React.FC = () => {
-    const { user, profile, role, loading: authLoading, logout } = useAuth();
+    const { user, profile, loading: authLoading, logout } = useAuth();
 
     const isGameRoute = () => {
         if (typeof window === 'undefined') return false;
@@ -80,20 +80,35 @@ const AppContent: React.FC = () => {
         setModal({ show: true, title, message, isConfirm: false, onConfirm: () => setModal((m) => ({ ...m, show: false })) });
     };
 
-    // Firebase Data Subscriptions
+    // Public site configuration subscription (needed on LoginView for isSiteClosed & staffLoginMethod)
     useEffect(() => {
         if (!user) return;
+        const unsubSettings = onSnapshot(doc(db, 'artifacts', appId, 'public', 'config'), (d) => {
+            if (d.exists()) setSiteSettings(d.data());
+        });
+        return () => unsubSettings();
+    }, [user]);
+
+    // SEC-HIGH-02: Gate authenticated Firestore subscriptions (exams, users, events) until a verified profile is active
+    useEffect(() => {
+        if (!user || !profile) {
+            setUsersList([]);
+            setExams([]);
+            setEventsList([]);
+            return;
+        }
+
         const unsubExams = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'exams'), (s) =>
             setExams(s.docs.map((d) => ({ id: d.id, ...d.data() })))
         );
 
         // SEC-02: Isolate user list to staff only. Students never receive the full roster.
         let unsubUsers = () => {};
-        if (profile && profile.role !== 'student') {
+        if (profile.role !== 'student') {
             unsubUsers = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'users'), (s) =>
                 setUsersList(s.docs.map((d) => ({ id: d.id, phone: d.id, firestoreId: d.id, ...d.data() } as unknown as UserProfile)))
             );
-        } else if (profile && profile.role === 'student' && profile.id) {
+        } else if (profile.role === 'student' && profile.id) {
             unsubUsers = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'users', profile.id), (d) => {
                 if (d.exists()) {
                     setUsersList([{ id: d.id, phone: d.id, firestoreId: d.id, ...d.data() } as unknown as UserProfile]);
@@ -101,14 +116,12 @@ const AppContent: React.FC = () => {
             });
         }
 
-        const unsubSettings = onSnapshot(doc(db, 'artifacts', appId, 'public', 'config'), (d) => {
-            if (d.exists()) setSiteSettings(d.data());
-        });
         const unsubEvents = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'events'), async (s) => {
             const docs = s.docs.map((d) => ({ id: d.id, ...d.data() }));
             setEventsList(docs);
 
-            if (s.empty) {
+            // Only allow staff/admin sessions to seed initial default events
+            if (s.empty && profile.role !== 'student') {
                 const defaultMeetings = [1, 2, 3, 4, 'פסח', 5, 6, 'קורס קיץ'];
                 const now = new Date();
                 const batch = writeBatch(db);
@@ -133,7 +146,6 @@ const AppContent: React.FC = () => {
         return () => {
             unsubExams();
             unsubUsers();
-            unsubSettings();
             unsubEvents();
         };
     }, [user, profile]);
@@ -142,13 +154,15 @@ const AppContent: React.FC = () => {
     useEffect(() => {
         if (!user || !profile || profile.role !== 'admin' || !profile.phone) return;
         const phone = profile.phone;
+        const adminName = (profile.name || profile.fullName || '').trim();
+        if (!adminName) return;
         const exists = usersList.some((u) => u.phone === phone || u.id === phone);
         if (!exists) {
             const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', phone);
             setDoc(userRef, {
                 id: phone,
-                name: profile.name || profile.fullName || "עידן קרבצ'יק",
-                fullName: profile.fullName || profile.name || "עידן קרבצ'יק",
+                name: adminName,
+                fullName: adminName,
                 phone: phone,
                 role: 'admin',
                 school: profile.school || 'מנהלה',
@@ -223,9 +237,9 @@ const AppContent: React.FC = () => {
         }
     }, [user, profile]);
 
-    // Check Site Closed status
+    // Check Site Closed status (strictly role-based, no hardcoded name bypass)
     useEffect(() => {
-        if (siteSettings?.isSiteClosed && profile && (profile as any).name?.trim() !== "עידן קרבצ'יק" && profile.role !== 'admin') {
+        if (siteSettings?.isSiteClosed && profile && profile.role !== 'admin') {
             setTimeout(() => {
                 logout();
                 showAlert('המערכת סגורה', 'הי! האתר סגור כרגע לכניסה, ניפגש בהמשך!');

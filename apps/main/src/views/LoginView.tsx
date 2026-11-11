@@ -34,6 +34,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ usersList, siteSettings, s
     // Handle Student Login
     const handleStudentSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (loading) return;
         setLoading(true);
         const res = await loginStudent(name, phone, usersList);
         setLoading(false);
@@ -48,6 +49,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ usersList, siteSettings, s
     // Handle Staff Login Request (SMS OTP or Static Passcode based on global siteSettings)
     const handleStaffSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (loading) return;
 
         if (staffMode === 'passcode') {
             setLoading(true);
@@ -78,6 +80,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ usersList, siteSettings, s
     // Handle OTP Verification
     const handleVerifyOTP = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (loading) return;
         setLoading(true);
         const res = await verifyStaffOTP(otp);
         setLoading(false);
@@ -130,6 +133,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ usersList, siteSettings, s
                             <label htmlFor="student-name" className="text-[14px] font-medium text-[#3c4043] block mr-0.5">שם מלא</label>
                             <input
                                 id="student-name"
+                                maxLength={100}
+                                autoComplete="name"
                                 className="w-full h-11 px-3 border border-[#dadce0] rounded text-[14px] bg-white focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8] outline-none transition-all text-[#202124]"
                                 placeholder="שם מלא כפי שנרשמת"
                                 value={name}
@@ -142,6 +147,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ usersList, siteSettings, s
                             <input
                                 id="student-phone"
                                 type="tel"
+                                maxLength={15}
+                                autoComplete="tel"
                                 className="w-full h-11 px-3 border border-[#dadce0] rounded text-[14px] bg-white focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8] outline-none transition-all text-[#202124]"
                                 placeholder="050-0000000"
                                 value={phone}
@@ -152,9 +159,10 @@ export const LoginView: React.FC<LoginViewProps> = ({ usersList, siteSettings, s
                         </div>
                         <button
                             type="submit"
-                            className="w-full h-10 bg-[#1a73e8] hover:bg-[#1967d2] text-white rounded-full font-medium text-[14px] transition-all mt-4"
+                            disabled={loading}
+                            className="w-full h-10 bg-[#1a73e8] hover:bg-[#1967d2] text-white rounded-full font-medium text-[14px] transition-all mt-4 disabled:opacity-50 flex items-center justify-center"
                         >
-                            התחבר למערכת
+                            {loading ? <Loader2 className="animate-spin mx-auto" /> : 'התחבר למערכת'}
                         </button>
                     </form>
                 )}
@@ -166,6 +174,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ usersList, siteSettings, s
                             <label htmlFor="staff-name" className="text-[14px] font-medium text-[#3c4043] block mr-0.5">שם איש הצוות</label>
                             <input
                                 id="staff-name"
+                                maxLength={100}
+                                autoComplete="name"
                                 className="w-full h-11 px-3 border border-[#dadce0] rounded text-[14px] bg-white focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8] outline-none transition-all text-[#202124]"
                                 placeholder="שם מלא"
                                 value={name}
@@ -178,6 +188,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ usersList, siteSettings, s
                             <input
                                 id="staff-phone"
                                 type="tel"
+                                maxLength={15}
+                                autoComplete="tel"
                                 className="w-full h-11 px-3 border border-[#dadce0] rounded text-[14px] bg-white focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8] outline-none transition-all text-[#202124]"
                                 placeholder="050-0000000"
                                 value={phone}
@@ -194,6 +206,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ usersList, siteSettings, s
                                     <input
                                         id="staff-passcode"
                                         type="password"
+                                        maxLength={32}
+                                        autoComplete="current-password"
                                         className="w-full h-11 px-3 border border-[#dadce0] rounded text-[14px] bg-white focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8] outline-none transition-all text-[#202124] pl-10"
                                         placeholder="קוד גישה"
                                         value={passcode}
@@ -223,11 +237,15 @@ export const LoginView: React.FC<LoginViewProps> = ({ usersList, siteSettings, s
                         </label>
                         <input
                             id="otp-input"
-                            type="number"
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]{6}"
+                            maxLength={6}
+                            autoComplete="one-time-code"
                             className="w-full h-12 px-3 border border-[#dadce0] rounded text-[20px] font-medium tracking-[0.2em] text-center bg-white focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8] outline-none transition-all text-[#202124]"
                             placeholder="------"
                             value={otp}
-                            onChange={(e) => setOtp(e.target.value)}
+                            onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                             dir="ltr"
                             autoFocus
                             required

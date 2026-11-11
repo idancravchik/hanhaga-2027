@@ -6,61 +6,82 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isStaff() {
+    function isStaff(appId) {
       return isAuthenticated() && (
         request.auth.token.role in ['admin', 'instructor', 'assistant', 'inspector'] ||
-        exists(/databases/$(database)/documents/artifacts/$(appId)/public/data/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/artifacts/$(appId)/public/data/users/$(request.auth.uid)).data.role in ['admin', 'instructor', 'assistant', 'inspector']
+        (exists(/databases/$(database)/documents/artifacts/$(appId)/public/data/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/artifacts/$(appId)/public/data/users/$(request.auth.uid)).data.role in ['admin', 'instructor', 'assistant', 'inspector'])
       );
     }
 
-    function isAdmin() {
+    function isAdmin(appId) {
       return isAuthenticated() && (
         request.auth.token.role == 'admin' ||
-        exists(/databases/$(database)/documents/artifacts/$(appId)/public/data/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/artifacts/$(appId)/public/data/users/$(request.auth.uid)).data.role == 'admin'
+        (exists(/databases/$(database)/documents/artifacts/$(appId)/public/data/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/artifacts/$(appId)/public/data/users/$(request.auth.uid)).data.role == 'admin')
       );
+    }
+
+    // Internal Cloud Functions collections - strictly locked down from client access
+    match /system_api_keys/{docId} {
+      allow read, write: if false;
+    }
+
+    match /system_idempotency/{docId} {
+      allow read, write: if false;
     }
 
     // Config & Settings
     match /artifacts/{appId}/public/config {
       allow read: if true;
-      allow write: if isStaff();
+      allow write: if isAuthenticated();
     }
     
     // User Profiles
     match /artifacts/{appId}/public/data/users/{userId} {
       allow read: if isAuthenticated();
-      allow write: if isStaff() || (isAuthenticated() && request.auth.uid == userId);
+      allow create, update: if isAuthenticated() && (!('role' in request.resource.data) || request.resource.data.role in ['student', 'instructor', 'assistant', 'admin', 'inspector']);
+      allow delete: if isAuthenticated();
     }
 
     // Exams
     match /artifacts/{appId}/public/data/exams/{examId} {
-      allow read: if isAuthenticated();
-      allow write: if isStaff();
+      allow read, write: if isAuthenticated();
     }
 
     // Grades
     match /artifacts/{appId}/public/data/grades/{gradeId} {
-      allow read: if isAuthenticated();
-      allow write: if isStaff();
+      allow read, write: if isAuthenticated();
     }
 
     // Attendance
     match /artifacts/{appId}/public/data/attendance/{studentId} {
-      allow read: if isAuthenticated();
-      allow write: if isStaff();
+      allow read, write: if isAuthenticated();
     }
 
     // Internal Staff Notes (student tracking portfolio)
     match /artifacts/{appId}/public/data/notes/{studentId} {
-      allow read, write: if isStaff();
+      allow read, write: if isAuthenticated();
     }
 
     // Events & Meetings
     match /artifacts/{appId}/public/data/events/{eventId} {
-      allow read: if isAuthenticated();
-      allow write: if isStaff();
+      allow read, write: if isAuthenticated();
+    }
+
+    // Bulletin Boards
+    match /artifacts/{appId}/public/data/bulletin_boards/{boardId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Catch-all for any additional public/data collections under artifacts/{appId}
+    match /artifacts/{appId}/public/data/{collection}/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Default deny for everything else
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

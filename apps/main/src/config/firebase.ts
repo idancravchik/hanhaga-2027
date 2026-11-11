@@ -1,6 +1,7 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, getFirestore, Firestore } from 'firebase/firestore';
+import { getStorage, FirebaseStorage } from 'firebase/storage';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider, AppCheck } from 'firebase/app-check';
 
 const firebaseConfig = {
@@ -18,6 +19,7 @@ const appIdString = import.meta.env.VITE_FIREBASE_PROJECT_ID || 'hanhaga-2027';
 let app: FirebaseApp;
 let db: Firestore;
 let auth: Auth;
+let storage: FirebaseStorage;
 let appCheck: AppCheck | undefined;
 
 try {
@@ -32,6 +34,7 @@ try {
         db = getFirestore(app);
     }
     auth = getAuth(app);
+    storage = getStorage(app);
 
     // Initialize App Check with reCAPTCHA v3 (optional)
     if (typeof window !== 'undefined') {
@@ -55,4 +58,4 @@ try {
     console.error("Firebase initialization error:", e);
 }
 
-export { app, db, auth, appCheck, appIdString as appId };
+export { app, db, auth, storage, appCheck, appIdString as appId };

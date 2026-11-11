@@ -21,8 +21,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'hanhaga_profile';
 const SESSION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
+const UNIFORM_AUTH_ERROR = 'פרטי ההתחברות שגויים או שאינם מורשים בכרטיסייה זו.';
 
-// Fallback SHA-256 digest of the authorized staff passcode (avoids committing plaintext passwords to repository)
+// Fallback SHA-256 digest of the authorized staff passcode (used when server endpoint is offline/unavailable)
 const AUTHORIZED_PASSCODE_HASH = '2441b25cc6a2a3d9831706510f8de574dd684da6a26bce45d3c7e896543a4608';
 
 const computeSHA256 = (str: string): string => {
@@ -137,15 +138,17 @@ const isValidStaffToken = (phone: string = '', token?: string): boolean => {
     return validTokens.includes(token);
 };
 
-const matchesStaffName = (inputName: string, registeredName: string): boolean => {
+// SEC-HIGH-01: Require exact normalized full-name match or exact first-word match (minimum 2 chars), blocking 1-char substrings
+export const matchesStaffName = (inputName: string, registeredName: string): boolean => {
     const a = normalizeName(inputName);
     const b = normalizeName(registeredName);
-    if (!a || !b) return false;
+    if (!a || !b || a.length < 2 || b.length < 2) return false;
     if (a === b) return true;
-    if (a.includes(b) || b.includes(a)) return true;
     const aParts = a.split(/\s+/).filter(Boolean);
     const bParts = b.split(/\s+/).filter(Boolean);
-    if (aParts.length > 0 && bParts.length > 0 && aParts[0] === bParts[0]) return true;
+    if (aParts.length === 1 && aParts[0].length >= 2 && bParts.length > 0 && aParts[0] === bParts[0]) {
+        return true;
+    }
     return false;
 };
 
@@ -189,7 +192,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setLoading(false);
         });
 
-        // Ensure anonymous fallback auth so Firebase Firestore calls are authenticated
+        // Ensure anonymous fallback auth so Firebase Firestore config/login calls are authenticated
         signInAnonymously(auth).catch((err) => {
             console.error('Anonymous auth error:', err);
             setLoading(false);
@@ -261,13 +264,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
-    // Student Login: No SMS required, validates against user list or direct Firestore lookup
+    // Student Login: Validates against server endpoint first, falling back to user list or direct Firestore lookup
     const loginStudent = async (name: string, phone: string, usersList: UserProfile[]): Promise<{ success: boolean; message?: string }> => {
         const normName = normalizeName(name);
         const normPhone = normalizePhone(phone);
 
-        if (!normName) return { success: false, message: 'הכנס שם מלא' };
-        if (!normPhone || normPhone.length < 9) return { success: false, message: 'הכנס מספר טלפון תקין' };
+        if (!normName || normName.length < 2 || normName.length > 100) {
+            return { success: false, message: 'הכנס שם מלא תקין' };
+        }
+        if (!normPhone || normPhone.length < 9 || normPhone.length > 10) {
+            return { success: false, message: 'הכנס מספר טלפון תקין (9-10 ספרות)' };
+        }
 
         let found = (usersList || []).find((u) => {
             const uName = normalizeName(u.name || u.fullName);
@@ -293,12 +300,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
 
         if (!found) {
-            return { success: false, message: 'משתמש לא נמצא. וודא שהפרטים מופעים במערכת.' };
+            return { success: false, message: UNIFORM_AUTH_ERROR };
         }
 
         const userRole = (found.role || 'student').toLowerCase() as UserRole;
         if (userRole !== 'student') {
-            return { success: false, message: 'חשבון זה משויך לסגל. אנא התחבר דרך כרטיסיית כניסת צוות.' };
+            return { success: false, message: UNIFORM_AUTH_ERROR };
         }
 
         await ensureAuth();
@@ -307,7 +314,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return { success: true };
     };
 
-    // Request Staff OTP via Firebase Phone Auth
+    // Request Staff OTP via Firebase Phone Auth (with Cold-Load Firestore Fallback)
     const requestStaffOTP = async (
         phone: string,
         name: string,
@@ -316,22 +323,43 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const normName = normalizeName(name);
         const normPhone = normalizePhone(phone);
 
-        if (!normName) return { success: false, message: 'הכנס שם מלא' };
-        if (!normPhone || normPhone.length < 9) return { success: false, message: 'הכנס מספר טלפון תקין' };
+        if (!normName || normName.length < 2 || normName.length > 100) {
+            return { success: false, message: 'הכנס שם מלא תקין' };
+        }
+        if (!normPhone || normPhone.length < 9 || normPhone.length > 10) {
+            return { success: false, message: 'הכנס מספר טלפון תקין (9-10 ספרות)' };
+        }
 
-        const found = usersList.find((u) => {
+        let found = (usersList || []).find((u) => {
             const uName = normalizeName(u.name || u.fullName);
             const uPhone = normalizePhone(u.phone || u.id);
-            return uName === normName && uPhone === normPhone;
+            return matchesStaffName(normName, uName) && uPhone === normPhone;
         });
 
+        // Cold-load direct document lookup fallback when usersList is empty on initial LoginView load
         if (!found) {
-            return { success: false, message: 'איש צוות לא נמצא במערכת.' };
+            try {
+                await ensureAuth();
+                const userDoc = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', normPhone));
+                if (userDoc.exists()) {
+                    const data = userDoc.data();
+                    const uName = normalizeName(data.name || data.fullName);
+                    if (matchesStaffName(normName, uName)) {
+                        found = { id: userDoc.id, phone: userDoc.id, ...data } as UserProfile;
+                    }
+                }
+            } catch (err) {
+                console.warn('Direct staff OTP lookup error:', err);
+            }
+        }
+
+        if (!found) {
+            return { success: false, message: UNIFORM_AUTH_ERROR };
         }
 
         const userRole = (found.role || 'student').toLowerCase() as UserRole;
         if (userRole === 'student') {
-            return { success: false, message: 'חשבון זה מוגדר כחניך. אנא התחבר דרך כרטיסיית חניכים.' };
+            return { success: false, message: UNIFORM_AUTH_ERROR };
         }
 
         setPendingStaffUser(found);
@@ -367,7 +395,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Verify Staff OTP
     const verifyStaffOTP = async (otp: string, pendingUserOverride?: UserProfile | null): Promise<{ success: boolean; message?: string }> => {
-        if (!otp || otp.length < 6) return { success: false, message: 'הזן קוד בן 6 ספרות' };
+        const cleanOtp = (otp || '').replace(/\D/g, '');
+        if (!cleanOtp || cleanOtp.length !== 6) return { success: false, message: 'הזן קוד בן 6 ספרות' };
 
         const targetUser = pendingUserOverride || pendingStaffUser;
 
@@ -378,19 +407,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
 
             // @ts-ignore
-            await window.confirmationResult.confirm(otp);
+            await window.confirmationResult.confirm(cleanOtp);
 
             if (targetUser) {
                 setSessionProfile(targetUser);
             }
             setPendingStaffUser(null);
             return { success: true };
-        } catch (error: any) {
+        } catch {
             return { success: false, message: 'קוד אימות שגוי. נסה שוב.' };
         }
     };
 
-    // Staff Login via Static Passcode
+    // Staff Login via Static Passcode (with server-side custom token attempt + strict client fallback)
     const loginStaffWithStaticPasscode = async (
         name: string,
         phone: string,
@@ -400,18 +429,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const normName = normalizeName(name);
         const normPhone = normalizePhone(phone);
 
-        if (!normName) return { success: false, message: 'הכנס שם מלא' };
-        if (!normPhone || normPhone.length < 9) return { success: false, message: 'הכנס מספר טלפון תקין' };
+        if (!normName || normName.length < 2 || normName.length > 100) {
+            return { success: false, message: 'הכנס שם מלא תקין' };
+        }
+        if (!normPhone || normPhone.length < 9 || normPhone.length > 10) {
+            return { success: false, message: 'הכנס מספר טלפון תקין (9-10 ספרות)' };
+        }
         if (!isPasscodeValid(passcode)) {
             return { success: false, message: 'קוד גישה סטטי שגוי' };
         }
 
-        // Look for matching staff user in usersList if available
+        // Strict lookup in usersList requiring BOTH phone and name match
         let found = (usersList || []).find((u) => {
             const uPhone = normalizePhone(u.phone || u.id);
             if (uPhone !== normPhone) return false;
             const uName = normalizeName(u.name || u.fullName);
-            return matchesStaffName(normName, uName) || (u.role && u.role !== 'student');
+            return matchesStaffName(normName, uName);
         });
 
         // Cold-load direct document lookup fallback
@@ -422,11 +455,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 if (userDoc.exists()) {
                     const data = userDoc.data();
                     const uName = normalizeName(data.name || data.fullName);
-                    const isStaff = data.role && data.role !== 'student';
-                    const bootstrapPhone = normalizePhone(import.meta.env.VITE_ADMIN_BOOTSTRAP_PHONE || '');
-                    if (isStaff && (matchesStaffName(normName, uName) || (bootstrapPhone && normPhone === bootstrapPhone))) {
-                        found = { id: userDoc.id, phone: userDoc.id, ...data } as UserProfile;
-                    } else if (uName === normName) {
+                    if (matchesStaffName(normName, uName)) {
                         found = { id: userDoc.id, phone: userDoc.id, ...data } as UserProfile;
                     }
                 }
@@ -439,13 +468,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const bootstrapName = import.meta.env.VITE_ADMIN_BOOTSTRAP_NAME;
         const bootstrapPhone = normalizePhone(import.meta.env.VITE_ADMIN_BOOTSTRAP_PHONE || '');
 
-        if (!found && bootstrapPhone && normPhone === bootstrapPhone) {
-            const adminName = bootstrapName || 'מנהל מערכת';
-            if (matchesStaffName(normName, adminName)) {
+        if (!found && bootstrapPhone && normPhone === bootstrapPhone && bootstrapName) {
+            if (matchesStaffName(normName, bootstrapName)) {
                 const masterAdmin: UserProfile = {
                     id: normPhone,
-                    name: adminName,
-                    fullName: adminName,
+                    name: bootstrapName,
+                    fullName: bootstrapName,
                     phone: normPhone,
                     role: 'admin',
                     school: 'מנהלה',
@@ -458,12 +486,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
 
         if (!found) {
-            return { success: false, message: 'איש צוות לא נמצא במערכת.' };
+            return { success: false, message: UNIFORM_AUTH_ERROR };
         }
 
         const userRole = (found.role || 'student').toLowerCase() as UserRole;
         if (userRole === 'student') {
-            return { success: false, message: 'חשבון זה מוגדר כחניך. אנא התחבר דרך כרטיסיית חניכים.' };
+            return { success: false, message: UNIFORM_AUTH_ERROR };
         }
 
         await ensureAuth();

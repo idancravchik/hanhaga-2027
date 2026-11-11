@@ -14,6 +14,7 @@ import attendanceRouter from './routes/attendance.js';
 import examsRouter from './routes/exams.js';
 import gradesRouter from './routes/grades.js';
 import reportsRouter from './routes/reports.js';
+import authRouter from './routes/auth.js';
 
 const app: Express = express();
 
@@ -28,6 +29,11 @@ const healthHandler = (_req: express.Request, res: Response) => {
 app.get('/health', healthHandler);
 app.get('/v1/health', healthHandler);
 app.get('/api/v1/health', healthHandler);
+
+// Public rate-limited auth endpoint (for custom token exchange)
+app.use('/api/v1/auth', rateLimiter, authRouter);
+app.use('/v1/auth', rateLimiter, authRouter);
+app.use('/api/auth', rateLimiter, authRouter);
 
 // Authenticated API router
 const v1Router = express.Router();

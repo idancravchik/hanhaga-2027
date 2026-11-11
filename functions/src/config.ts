@@ -1,5 +1,6 @@
 import { initializeApp, getApps, App } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
+import { getAuth, Auth } from 'firebase-admin/auth';
 
 export const APP_ID = process.env.FIREBASE_APP_ID_OVERRIDE || 'hanhaga-2027';
 
@@ -41,6 +42,25 @@ export const db: Firestore = new Proxy({} as Firestore, {
     const value = firestoreInstance[prop];
     if (typeof value === 'function') {
       return value.bind(firestoreInstance);
+    }
+    return value;
+  }
+});
+
+let _auth: Auth | null = null;
+function getAdminAuth(): Auth {
+  if (!_auth) {
+    _auth = getAuth(getApp());
+  }
+  return _auth;
+}
+
+export const adminAuth: Auth = new Proxy({} as Auth, {
+  get(_target, prop) {
+    const authInstance = getAdminAuth() as any;
+    const value = authInstance[prop];
+    if (typeof value === 'function') {
+      return value.bind(authInstance);
     }
     return value;
   }

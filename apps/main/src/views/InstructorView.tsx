@@ -5,6 +5,7 @@ import { doc, setDoc } from 'firebase/firestore';
 import { signInAnonymously } from 'firebase/auth';
 import { db, auth, appId } from '../config/firebase';
 import { MobileBottomNav } from '../components/navigation/MobileBottomNav';
+import { BulletinBoardBanner } from '../components/bulletin/BulletinBoardBanner';
 import { UserProfile, UserTag } from '../types/user';
 import { Exam, GradeRecord } from '../types/exam';
 import { CourseEvent, AttendanceMap } from '../types/event';
@@ -271,6 +272,8 @@ export default function InstructorView({
                 </div>
                 <button onClick={() => setView('login')} title="התנתקות" className="bg-[#fce8e6] hover:bg-[#fad2cf] p-2.5 rounded-full text-[#d93025] transition-all"><UserCircle size={22} /></button>
             </header>
+
+            <BulletinBoardBanner boardId="instructors" />
 
             {profile?.role !== 'assistant' && (
                 <div className="hidden sm:flex bg-white rounded-full p-1 border border-[#dadce0] mb-4 sm:mb-6 gap-1 overflow-x-auto no-scrollbar shrink-0">
