@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>צילום מתמיינים</title>
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <meta name="googlebot" content="noindex, nofollow, noarchive" />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <main class="page">
+      <div class="card">
+        <!-- Header -->
+        <header class="card-header">
+          <div>
+            <h1>צילום מתמיינים</h1>
+            <p class="subtitle">בחרו שם מהרשימה, צלמו תמונה ושמרו לתיקיית הדרייב</p>
+          </div>
+        </header>
+
+        <!-- Step 1: Name Dropdown from Google Sheets -->
+        <section class="field-group">
+          <div class="label-row">
+            <label for="nameSelect" class="field-label">שם המתמיין/ת (עמודה D - מידע טופס):</label>
+            <button
+              id="refreshNamesBtn"
+              type="button"
+              class="link-btn"
+              title="רענון רשימת השמות מהגיליון"
+            >
+              ↻ רענן רשימה
+            </button>
+          </div>
+          <select id="nameSelect" class="select-input">
+            <option value="">טוען שמות מהגיליון...</option>
+          </select>
+        </section>
+
+        <!-- Step 2: Camera Viewport -->
+        <section class="camera-section">
+          <div class="camera-box">
+            <video
+              id="cameraVideo"
+              class="camera-media"
+              autoplay
+              playsinline
+              muted
+            ></video>
+            <canvas
+              id="photoCanvas"
+              class="camera-media"
+              hidden
+            ></canvas>
+
+            <button
+              id="switchCameraBtn"
+              type="button"
+              class="camera-Action-pill"
+              title="החלף מצלמה קדמית/אחורית"
+            >
+              🔄 החלף מצלמה
+            </button>
+          </div>
+
+          <!-- Fallback file input for mobile/desktop if live stream is blocked -->
+          <div class="fallback-row">
+            <label for="fileInputFallback" class="link-btn">
+              📷 מצלמה לא נפתחת? לחצו כאן לצילום/בחירת תמונה מהמכשיר
+            </label>
+            <input
+              id="fileInputFallback"
+              type="file"
+              accept="image/*"
+              capture="environment"
+              hidden
+            />
+          </div>
+        </section>
+
+        <!-- Status Line -->
+        <div id="statusBox" class="status-box" role="status" aria-live="polite" hidden></div>
+
+        <!-- Step 3: Capture & Save Buttons -->
+        <footer class="actions-row">
+          <button id="captureBtn" type="button" class="btn btn-secondary">
+            📸 צילום תמונה
+          </button>
+          <button id="saveBtn" type="button" class="btn btn-primary" disabled>
+            💾 שמירה לדרייב
+          </button>
+        </footer>
+      </div>
+    </main>
+
+    <script src="js/main.js"></script>
+  </body>
+</html>

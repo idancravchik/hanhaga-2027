@@ -84,8 +84,9 @@ for (const entry of appEntries) {
         }
       }
     } else {
-      // Standalone app/page directly under apps/ (e.g. apps/mashabim)
+      // Standalone app/page directly under apps/ (e.g. apps/photos)
       const dest = path.join(publicDir, entry.name);
+      emptyDirRecursive(dest);
       console.log(`  -> Copying ${entry.name} to public/${entry.name}`);
       copyDirRecursive(appPath, dest);
     }
