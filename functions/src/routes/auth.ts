@@ -27,6 +27,17 @@ export function normalizeNameServer(name?: string | null): string {
     .replace(/["׳`׳’']/g, '');
 }
 
+export function matchesStaffNameServer(inputName: string, registeredName: string): boolean {
+  const a = normalizeNameServer(inputName);
+  const b = normalizeNameServer(registeredName);
+  if (!a || !b || a.length < 2 || b.length < 2) return false;
+  if (a === b) return true;
+  const aFirst = a.split(' ')[0];
+  const bFirst = b.split(' ')[0];
+  if (aFirst.length >= 2 && aFirst === bFirst) return true;
+  return false;
+}
+
 export function isPasscodeValidServer(passcode?: string | null): boolean {
   if (!passcode) return false;
   const clean = passcode.trim();
@@ -60,15 +71,45 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const userDoc = await db.doc(`${PATHS.USERS}/${normPhone}`).get();
+    let userDoc = await db.doc(`${PATHS.USERS}/${normPhone}`).get();
+    let data: Record<string, any> | null = userDoc.exists ? (userDoc.data() || {}) : null;
+
     if (!userDoc.exists) {
+      const snap = await db.collection(PATHS.USERS).where('phone', '==', normPhone).limit(1).get();
+      if (!snap.empty) {
+        userDoc = snap.docs[0] as any;
+        data = userDoc.data() || {};
+      }
+    }
+
+    // Bootstrap Admin Fallback
+    const bootstrapPhone = normalizePhoneServer(process.env.ADMIN_BOOTSTRAP_PHONE);
+    const bootstrapName = process.env.ADMIN_BOOTSTRAP_NAME;
+    if (!data && mode === 'staff' && bootstrapPhone && normPhone === bootstrapPhone && bootstrapName) {
+      if (matchesStaffNameServer(normName, bootstrapName)) {
+        data = {
+          id: normPhone,
+          phone: normPhone,
+          name: bootstrapName,
+          fullName: bootstrapName,
+          role: 'admin',
+          school: 'מנהלה',
+          tags: []
+        };
+      }
+    }
+
+    if (!data) {
       sendError(res, 401, 'UNAUTHORIZED', 'פרטי ההתחברות שגויים או שאינם מורשים בכרטיסייה זו');
       return;
     }
 
-    const data = userDoc.data() || {};
     const regName = normalizeNameServer(data.name || data.fullName);
-    if (regName !== normName) {
+    const isNameMatch = mode === 'staff'
+      ? matchesStaffNameServer(normName, regName)
+      : regName === normName;
+
+    if (!isNameMatch) {
       sendError(res, 401, 'UNAUTHORIZED', 'פרטי ההתחברות שגויים או שאינם מורשים בכרטיסייה זו');
       return;
     }

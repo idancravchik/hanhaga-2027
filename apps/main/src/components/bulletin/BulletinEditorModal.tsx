@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-    X, Megaphone, Upload, Trash2, Plus, ExternalLink,
-    Image as ImageIcon, Check, Loader2, RefreshCw, Eye, Edit3
+    X, Megaphone, Plus, ExternalLink,
+    Check, Loader2, RefreshCw, Eye, Edit3
 } from 'lucide-react';
+import { BulletinImageGallery } from './BulletinImageGallery';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage, appId, auth } from '../../config/firebase';
 import { signInAnonymously } from 'firebase/auth';
 import { BulletinBoardData, BulletinImage, BulletinLinkChip } from '../../types/bulletin';
 import { BulletinBoardBanner } from './BulletinBoardBanner';
+import { sanitizeHtml } from '../../utils/sanitize';
 
 export interface BulletinEditorModalProps {
     isOpen: boolean;
@@ -111,9 +113,10 @@ export const BulletinEditorModal: React.FC<BulletinEditorModalProps> = ({
     // Formatting Toolbar Helpers
     const applySize = (size: 'large' | 'medium' | 'small') => {
         if (!editorRef.current) return;
+        editorRef.current.focus();
         const selection = window.getSelection();
-        if (!selection || selection.rangeCount === 0 || selection.toString().length === 0) {
-            // If no text selected, append a sample formatted block
+        if (!selection || selection.rangeCount === 0 || selection.toString().trim().length === 0 || !editorRef.current.contains(selection.anchorNode)) {
+            // If no text selected inside editor, append a formatted block
             const sample = document.createElement(size === 'large' ? 'h3' : size === 'medium' ? 'h4' : 'p');
             sample.className =
                 size === 'large'
@@ -127,45 +130,27 @@ export const BulletinEditorModal: React.FC<BulletinEditorModalProps> = ({
             return;
         }
 
-        const range = selection.getRangeAt(0);
-        const selectedText = range.extractContents();
-        const wrapper = document.createElement('span');
-
-        if (size === 'large') {
-            wrapper.style.fontSize = '20px';
-            wrapper.style.fontWeight = 'bold';
-            wrapper.style.display = 'block';
-            wrapper.style.marginTop = '6px';
-            wrapper.style.marginBottom = '4px';
-        } else if (size === 'medium') {
-            wrapper.style.fontSize = '16px';
-            wrapper.style.fontWeight = '600';
-            wrapper.style.display = 'block';
-            wrapper.style.marginTop = '4px';
-            wrapper.style.marginBottom = '2px';
-        } else {
-            wrapper.style.fontSize = '14px';
-            wrapper.style.fontWeight = 'normal';
-        }
-
-        wrapper.appendChild(selectedText);
-        range.insertNode(wrapper);
+        const tag = size === 'large' ? '<h3>' : size === 'medium' ? '<h4>' : '<p>';
+        document.execCommand('formatBlock', false, tag);
         setHtmlContent(editorRef.current.innerHTML);
     };
 
     const applyColor = (hex: string) => {
         if (!editorRef.current) return;
+        editorRef.current.focus();
         const selection = window.getSelection();
-        if (!selection || selection.rangeCount === 0 || selection.toString().length === 0) {
+        if (!selection || selection.rangeCount === 0 || selection.toString().trim().length === 0 || !editorRef.current.contains(selection.anchorNode)) {
             return;
         }
+        document.execCommand('foreColor', false, hex);
+        setHtmlContent(editorRef.current.innerHTML);
+    };
 
-        const range = selection.getRangeAt(0);
-        const selectedText = range.extractContents();
-        const span = document.createElement('span');
-        span.style.color = hex;
-        span.appendChild(selectedText);
-        range.insertNode(span);
+    const handleInsertImageIntoText = (img: BulletinImage) => {
+        if (!editorRef.current) return;
+        editorRef.current.focus();
+        const imgHtml = `<img src="${img.downloadUrl}" alt="${img.caption || 'תמונה'}" style="max-width:100%; border-radius:12px; margin: 8px 0;" /><p><br></p>`;
+        document.execCommand('insertHTML', false, imgHtml);
         setHtmlContent(editorRef.current.innerHTML);
     };
 
@@ -271,11 +256,12 @@ export const BulletinEditorModal: React.FC<BulletinEditorModalProps> = ({
             }
 
             const finalHtml = editorRef.current ? editorRef.current.innerHTML : htmlContent;
+            const cleanHtml = sanitizeHtml(finalHtml);
 
             const payload: BulletinBoardData = {
                 id: activeTab,
                 isEnabled,
-                htmlContent: finalHtml,
+                htmlContent: cleanHtml,
                 images,
                 links,
                 updatedAt: new Date().toISOString(),
@@ -521,83 +507,19 @@ export const BulletinEditorModal: React.FC<BulletinEditorModalProps> = ({
                             </div>
 
                             {/* 2. Photo Upload Section */}
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <label className="text-[14px] font-medium text-[#202124] flex items-center gap-1.5">
-                                        <ImageIcon size={16} className="text-[#1a73e8]" />
-                                        תמונות מצורפות:
-                                    </label>
-                                    <span className="text-[12px] text-[#5f6368]">
-                                        עד 8MB לקובץ (JPG, PNG, WebP)
-                                    </span>
-                                </div>
-
-                                <div className="flex flex-wrap gap-3 items-center">
-                                    {/* Upload Trigger Button */}
-                                    <input
-                                        type="file"
-                                        ref={fileInputRef}
-                                        onChange={handleFileUpload}
-                                        accept="image/*"
-                                        className="hidden"
-                                        id="bulletin-image-upload"
-                                    />
-                                    <label
-                                        htmlFor="bulletin-image-upload"
-                                        className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-full border border-dashed border-[#1a73e8] text-[#1a73e8] bg-[#e8f0fe]/50 hover:bg-[#e8f0fe] cursor-pointer text-[13px] font-medium transition-colors ${
-                                            uploadingImage ? 'opacity-50 pointer-events-none' : ''
-                                        }`}
-                                    >
-                                        {uploadingImage ? (
-                                            <>
-                                                <Loader2 size={16} className="animate-spin" /> מעלה תמונה...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Upload size={16} /> העלה תמונה מהמכשיר
-                                            </>
-                                        )}
-                                    </label>
-                                </div>
-
-                                {/* Uploaded Thumbnails Grid */}
-                                {images.length > 0 && (
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
-                                        {images.map((img) => (
-                                            <div
-                                                key={img.id}
-                                                className="relative group rounded-[14px] overflow-hidden border border-[#dadce0] bg-[#f8f9fa]"
-                                            >
-                                                <img
-                                                    src={img.downloadUrl}
-                                                    alt={img.caption || 'תמונה מצורפת'}
-                                                    className="w-full h-28 object-cover"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleRemoveImage(img)}
-                                                    className="absolute top-2 left-2 p-1.5 bg-white/90 hover:bg-[#d93025] hover:text-white text-[#d93025] rounded-full shadow-md transition-colors"
-                                                    title="הסר תמונה"
-                                                >
-                                                    <Trash2 size={14} />
-                                                </button>
-                                                <input
-                                                    type="text"
-                                                    value={img.caption || ''}
-                                                    onChange={(e) => {
-                                                        const val = e.target.value;
-                                                        setImages((prev) =>
-                                                            prev.map((i) => (i.id === img.id ? { ...i, caption: val } : i))
-                                                        );
-                                                    }}
-                                                    placeholder="כיתוב לתמונה (אופציונלי)"
-                                                    className="w-full text-[11px] p-1.5 bg-white border-t border-[#dadce0] text-right focus:outline-hidden text-[#3c4043]"
-                                                />
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                            <BulletinImageGallery
+                                images={images}
+                                uploadingImage={uploadingImage}
+                                fileInputRef={fileInputRef}
+                                onFileUpload={handleFileUpload}
+                                onRemoveImage={handleRemoveImage}
+                                onUpdateCaption={(id, caption) => {
+                                    setImages((prev) =>
+                                        prev.map((i) => (i.id === id ? { ...i, caption } : i))
+                                    );
+                                }}
+                                onInsertImageIntoText={handleInsertImageIntoText}
+                            />
 
                             {/* 3. Action Link Chips Builder */}
                             <div className="space-y-3">

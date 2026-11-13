@@ -3,6 +3,7 @@ import { Megaphone, ExternalLink, Image as ImageIcon, X, Maximize2 } from 'lucid
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db, appId } from '../../config/firebase';
 import { BulletinBoardData, BulletinImage } from '../../types/bulletin';
+import { sanitizeHtml } from '../../utils/sanitize';
 
 export interface BulletinBoardBannerProps {
     boardId: 'students' | 'instructors';
@@ -114,7 +115,7 @@ export const BulletinBoardBanner: React.FC<BulletinBoardBannerProps> = ({
                 {hasHtml && (
                     <div
                         className="bulletin-content leading-relaxed select-text space-y-2"
-                        dangerouslySetInnerHTML={{ __html: boardData.htmlContent }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(boardData.htmlContent) }}
                     />
                 )}
 

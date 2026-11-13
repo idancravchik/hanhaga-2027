@@ -1,27 +1,30 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
     Users, Plus, GraduationCap,
-    FileText, Download, Trash2,
-    Edit2, Search, Check, Eye, EyeOff, PieChart, TrendingUp, X, BarChart3, Lock, Unlock, Calendar, MessageSquare, KeyRound, Smartphone, Megaphone
+    FileText, PieChart, Lock, Unlock, Calendar, KeyRound, Smartphone, Megaphone
 } from 'lucide-react';
 import { doc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db, appId } from '../config/firebase';
 import { LOGO_URL } from '../config/constants';
 import { parseUsersCSV, exportUsersToCSV } from '../utils/csv';
 import { MobileBottomNav } from '../components/navigation/MobileBottomNav';
-import { UserProfile } from '../types/user';
+import { UserProfile, UserRole } from '../types/user';
 import { Exam, GradeRecord } from '../types/exam';
 import { CourseEvent, AttendanceMap } from '../types/event';
+import { BulletinBoardBanner } from '../components/bulletin/BulletinBoardBanner';
+
+import { AdminEventsView } from './admin/AdminEventsView';
+import { AdminAnalyticsView } from './admin/AdminAnalyticsView';
+import { AdminUsersView } from './admin/AdminUsersView';
+import { AdminExamsView } from './admin/AdminExamsView';
+import { AdminReportsView } from './admin/AdminReportsView';
 
 const StudentProfileModal = React.lazy(() => import('../components/users/StudentProfileModal').then(m => ({ default: m.StudentProfileModal })));
 const UserFormModal = React.lazy(() => import('../components/users/UserFormModal').then(m => ({ default: m.UserFormModal })));
-const UserManagementTable = React.lazy(() => import('../components/users/UserManagementTable').then(m => ({ default: m.UserManagementTable })));
 const ExamBuilderModal = React.lazy(() => import('../components/exams/ExamBuilderModal').then(m => ({ default: m.ExamBuilderModal })));
 const GradeEntryModal = React.lazy(() => import('../components/exams/GradeEntryModal').then(m => ({ default: m.GradeEntryModal })));
 const EventBuilderModal = React.lazy(() => import('../components/events/EventBuilderModal').then(m => ({ default: m.EventBuilderModal })));
-const AttendanceReportTable = React.lazy(() => import('../components/events/AttendanceReportTable').then(m => ({ default: m.AttendanceReportTable })));
 const BulletinEditorModal = React.lazy(() => import('../components/bulletin/BulletinEditorModal').then(m => ({ default: m.BulletinEditorModal })));
-import { BulletinBoardBanner } from '../components/bulletin/BulletinBoardBanner';
 
 export interface SiteSettings {
     isSiteClosed?: boolean;
@@ -108,8 +111,6 @@ export default function AdminView({
     const [filterDept, setFilterDept] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState<string>('');
 
-    const uniqueUsersList = usersList;
-
     const attendanceEvents = useMemo(() => {
         return (eventsList || [])
             .filter((e: CourseEvent) => e.type !== 'יום חשיפה')
@@ -117,7 +118,7 @@ export default function AdminView({
     }, [eventsList]);
 
     const filteredStudents = useMemo(() => {
-        return uniqueUsersList.filter(u => {
+        return usersList.filter(u => {
             const role = (u.role || 'student').toLowerCase();
             const matchRole = role === 'student';
             const normGroup = parseInt(String(u.group || 0), 10) || 0;
@@ -128,10 +129,10 @@ export default function AdminView({
             const matchSearch = !q || nameStr.includes(q) || phoneStr.includes(q);
             return matchRole && matchDept && matchSearch;
         });
-    }, [uniqueUsersList, filterDept, searchQuery]);
+    }, [usersList, filterDept, searchQuery]);
 
     const stats = useMemo(() => {
-        const students = uniqueUsersList.filter(u => u.role === 'student');
+        const students = usersList.filter(u => u.role === 'student');
         const total = students.length;
 
         const schools = students.reduce<Record<string, number>>((acc, s) => {
@@ -170,7 +171,7 @@ export default function AdminView({
             });
 
         return { total, schools, attByMeeting, groupGrades };
-    }, [uniqueUsersList, attendance, grades, exams, attendanceEvents]);
+    }, [usersList, attendance, grades, exams, attendanceEvents]);
 
     const isIdan = profile?.name?.trim() === "עידן קרבצ'יק";
 
@@ -204,7 +205,7 @@ export default function AdminView({
     };
 
     const handleExportCSV = () => {
-        exportUsersToCSV(uniqueUsersList, attendance, grades, eventsList, exams, 'דוח_מנהיגות');
+        exportUsersToCSV(usersList, attendance, grades, eventsList, exams, 'דוח_מנהיגות');
         showToast('הדוח יוצא בהצלחה!');
     };
 
@@ -219,7 +220,7 @@ export default function AdminView({
                     {(isIdan || profile?.role === 'admin') && (
                         <button
                             onClick={() => setIsBulletinModalOpen(true)}
-                            className="h-9 px-3.5 rounded-full transition-colors bg-[#e8f0fe] hover:bg-[#d2e3fc] text-[#1a73e8] border border-[#d2e3fc] flex items-center gap-1.5 font-medium text-[13px] shadow-2xs hover:shadow-xs"
+                            className="h-9 px-3.5 rounded-full transition-colors bg-[#e8f0fe] hover:bg-[#d2e3fc] text-[#1a73e8] border border-[#d2e3fc] flex items-center gap-1.5 font-medium text-[13px] shadow-2xs hover:shadow-xs cursor-pointer"
                             title="ערוך לוח מודעות ועדכונים (חניכים ומדריכים)"
                             aria-label="ערוך לוח מודעות ועדכונים"
                         >
@@ -235,7 +236,7 @@ export default function AdminView({
                                     await setDoc(doc(db, 'artifacts', appId, 'public', 'config'), { staffLoginMethod: nextMethod }, { merge: true });
                                     showToast(nextMethod === 'otp' ? "מצב כניסת צוות שונה ל-SMS (OTP)" : "מצב כניסת צוות שונה לקוד גישה סטטי");
                                 }}
-                                className="h-9 px-3 rounded-full transition-colors bg-[#f8f9fa] text-[#174ea6] border border-[#dadce0] hover:bg-[#e8f0fe] flex items-center gap-1.5 font-medium text-[13px]"
+                                className="h-9 px-3 rounded-full transition-colors bg-[#f8f9fa] text-[#174ea6] border border-[#dadce0] hover:bg-[#e8f0fe] flex items-center gap-1.5 font-medium text-[13px] cursor-pointer"
                                 title={siteSettings?.staffLoginMethod === 'otp' ? 'שנה מצב כניסת צוות לקוד סטטי' : 'שנה מצב כניסת צוות ל-SMS OTP'}
                             >
                                 {siteSettings?.staffLoginMethod === 'otp' ? <Smartphone size={16} /> : <KeyRound size={16} />}
@@ -247,14 +248,14 @@ export default function AdminView({
                                     await setDoc(doc(db, 'artifacts', appId, 'public', 'config'), { isSiteClosed: isClosed }, { merge: true });
                                     showToast(isClosed ? "האתר נסגר כעת למשתמשים" : "האתר נפתח מחדש למשתמשים", isClosed ? "error" : "success");
                                 }}
-                                className={`h-9 px-3 rounded-full transition-colors border ${siteSettings?.isSiteClosed ? 'bg-[#fce8e6] text-[#991b1b] border-[#fce8e6]' : 'bg-[#f8f9fa] text-[#3c4043] border-[#dadce0] hover:text-[#202124]'}`}
+                                className={`h-9 px-3 rounded-full transition-colors border cursor-pointer ${siteSettings?.isSiteClosed ? 'bg-[#fce8e6] text-[#991b1b] border-[#fce8e6]' : 'bg-[#f8f9fa] text-[#3c4043] border-[#dadce0] hover:text-[#202124]'}`}
                                 title={siteSettings?.isSiteClosed ? 'פתח אתר' : 'נעילת אתר חירום למשתמשים'}
                             >
                                 {siteSettings?.isSiteClosed ? <Lock size={16} /> : <Unlock size={16} />}
                             </button>
                         </>
                     )}
-                    <button onClick={() => setView('login')} className="h-9 px-4 rounded-full text-[#991b1b] font-semibold bg-[#fee2e2] hover:bg-[#fecaca] transition-colors text-[13px]">התנתק</button>
+                    <button onClick={() => setView('login')} className="h-9 px-4 rounded-full text-[#991b1b] font-semibold bg-[#fee2e2] hover:bg-[#fecaca] transition-colors text-[13px] cursor-pointer">התנתק</button>
                 </div>
             </header>
 
@@ -264,421 +265,97 @@ export default function AdminView({
                 onEditClick={() => setIsBulletinModalOpen(true)}
             />
 
-            {/* Admin Subview Navigation Bar (Desktop / Tablet only) */}
+            {/* Admin Subview Navigation Bar */}
             <div className="hidden sm:flex w-full bg-white p-1 rounded-full border border-[#dadce0] gap-1 overflow-x-auto no-scrollbar shrink-0">
-                <button onClick={() => setAdminSubView('reports')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all ${adminSubView === 'reports' ? 'bg-[#1a73e8] text-white' : 'text-[#3c4043] hover:text-[#202124]'}`}>דוחות קורס</button>
-                <button onClick={() => setAdminSubView('analytics')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all ${adminSubView === 'analytics' ? 'bg-[#1a73e8] text-white' : 'text-[#3c4043] hover:text-[#202124]'}`}>אנליטיקה</button>
-                <button onClick={() => setAdminSubView('users')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all ${adminSubView === 'users' ? 'bg-[#1a73e8] text-white' : 'text-[#3c4043] hover:text-[#202124]'}`}>משתמשים</button>
-                <button onClick={() => setAdminSubView('exams')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all ${adminSubView === 'exams' ? 'bg-[#1a73e8] text-white' : 'text-[#3c4043] hover:text-[#202124]'}`}>מבחנים</button>
-                <button onClick={() => setAdminSubView('events')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all ${adminSubView === 'events' ? 'bg-[#1a73e8] text-white' : 'text-[#3c4043] hover:text-[#202124]'}`}>לוח אירועים</button>
+                <button onClick={() => setAdminSubView('reports')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all cursor-pointer ${adminSubView === 'reports' ? 'bg-[#1a73e8] text-white' : 'text-[#3c4043] hover:text-[#202124]'}`}>דוחות קורס</button>
+                <button onClick={() => setAdminSubView('analytics')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all cursor-pointer ${adminSubView === 'analytics' ? 'bg-[#1a73e8] text-white' : 'text-[#3c4043] hover:text-[#202124]'}`}>אנליטיקה</button>
+                <button onClick={() => setAdminSubView('users')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all cursor-pointer ${adminSubView === 'users' ? 'bg-[#1a73e8] text-white' : 'text-[#3c4043] hover:text-[#202124]'}`}>משתמשים</button>
+                <button onClick={() => setAdminSubView('exams')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all cursor-pointer ${adminSubView === 'exams' ? 'bg-[#1a73e8] text-white' : 'text-[#3c4043] hover:text-[#202124]'}`}>מבחנים</button>
+                <button onClick={() => setAdminSubView('events')} className={`flex-1 min-w-[85px] py-2 px-2.5 rounded-full font-medium text-[13px] sm:text-[14px] whitespace-nowrap transition-all cursor-pointer ${adminSubView === 'events' ? 'bg-[#1a73e8] text-white' : 'text-[#3c4043] hover:text-[#202124]'}`}>לוח אירועים</button>
             </div>
 
             {/* SubView Contents */}
             {adminSubView === 'events' && (
-                <div className="space-y-4 sm:space-y-6 w-full" dir="rtl">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-6 rounded-[24px] border border-[#dadce0]">
-                        <div>
-                            <h3 className="text-[18px] sm:text-[20px] font-medium text-[#202124]">לוח אירועים ומפגשים ({eventsList.length})</h3>
-                            <p className="text-[12px] text-[#5f6368] font-normal mt-0.5">ניהול מפגשים, מסעות ודיווחי נוכחות</p>
-                        </div>
-                        <button
-                            onClick={() => { setEventToEdit(null); setIsEventModalOpen(true); }}
-                            className="h-10 px-5 bg-[#1a73e8] hover:bg-[#1967d2] text-white rounded-full font-medium text-[13px] sm:text-[14px] flex items-center justify-center gap-1.5 transition-all w-full sm:w-auto"
-                        >
-                            <Plus size={16} /> הוסף אירוע חדש
-                        </button>
-                    </div>
-
-                    {selectedAttendanceEvent ? (
-                        <React.Suspense fallback={<div className="p-8 text-center text-[#5f6368] text-sm animate-pulse">טוען נתוני נוכחות...</div>}>
-                            <AttendanceReportTable
-                                event={selectedAttendanceEvent}
-                                students={filteredStudents}
-                                attendance={attendance}
-                                onClose={() => setSelectedAttendanceEvent(null)}
-                                showToast={showToast}
-                            />
-                            {isBulletinModalOpen && (
-                    <BulletinEditorModal
-                        isOpen={isBulletinModalOpen}
-                        onClose={() => setIsBulletinModalOpen(false)}
-                        showToast={showToast}
-                        currentUserName={profile.name || profile.fullName}
-                    />
-                )}
-            </React.Suspense>
-                    ) : (
-                        <div className="bg-white rounded-[24px] overflow-hidden border border-[#dadce0]">
-                            <div className="divide-y divide-[#dadce0]">
-                                {eventsList.length === 0 ? (
-                                    <div className="p-8 text-center text-[#5f6368] text-[14px] font-normal">אין אירועים בלו"ז. לחץ על "הוסף אירוע חדש" כדי להתחיל.</div>
-                                ) : (
-                                    [...(eventsList || [])]
-                                        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                                        .map((ev) => (
-                                            <div key={ev.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-[#f8f9fa] transition-colors">
-                                                <div>
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <span className="px-2.5 py-0.5 rounded-full text-[12px] font-normal border border-[#dadce0] bg-[#f8f9fa] text-[#3c4043]">
-                                                            {ev.type}
-                                                        </span>
-                                                        <span className="text-[12px] text-[#5f6368] font-normal" dir="ltr">
-                                                            {ev.date ? new Date(ev.date).toLocaleString('he-IL', { dateStyle: 'short', timeStyle: 'short' }) : '-'}
-                                                        </span>
-                                                    </div>
-                                                    <h4 className="font-medium text-[16px] text-[#202124]">{ev.title}</h4>
-                                                    {ev.location && <p className="text-[12px] text-[#5f6368] font-normal mt-0.5">מיקום: {ev.location}</p>}
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    {ev.type !== 'יום חשיפה' && (
-                                                        <button
-                                                            onClick={() => setSelectedAttendanceEvent(ev)}
-                                                            className="h-8 px-3 rounded-full bg-[#e8f0fe] hover:bg-[#d2e3fc] text-[#1a73e8] text-[12px] font-medium transition-colors flex items-center gap-1"
-                                                        >
-                                                            <Calendar size={14} /> הזן נוכחות
-                                                        </button>
-                                                    )}
-                                                    <button
-                                                        onClick={() => { setEventToEdit(ev); setIsEventModalOpen(true); }}
-                                                        className="p-2 hover:bg-[#f8f9fa] text-[#5f6368] hover:text-[#202124] rounded-full transition-colors"
-                                                        title="ערוך אירוע"
-                                                    >
-                                                        <Edit2 size={16} />
-                                                    </button>
-                                                    <button
-                                                        onClick={async () => {
-                                                            if (window.confirm(`האם למחוק את האירוע "${ev.title}"?`)) {
-                                                                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'events', ev.id));
-                                                                showToast('האירוע נמחק');
-                                                            }
-                                                        }}
-                                                        className="p-2 hover:bg-[#fce8e6] text-[#d93025] rounded-full transition-colors"
-                                                        title="מחק אירוע"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ))
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </div>
+                <AdminEventsView
+                    eventsList={eventsList}
+                    selectedAttendanceEvent={selectedAttendanceEvent}
+                    setSelectedAttendanceEvent={setSelectedAttendanceEvent}
+                    filteredStudents={filteredStudents}
+                    attendance={attendance}
+                    showToast={showToast}
+                    onOpenAddEvent={() => { setEventToEdit(null); setIsEventModalOpen(true); }}
+                    onEditEvent={(ev) => { setEventToEdit(ev); setIsEventModalOpen(true); }}
+                    onDeleteEvent={async (ev) => {
+                        if (window.confirm(`האם למחוק את האירוע "${ev.title}"?`)) {
+                            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'events', ev.id));
+                            showToast('האירוע שנבחר נמחק');
+                        }
+                    }}
+                />
             )}
 
             {adminSubView === 'analytics' && (
-                <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div className="bg-white p-6 rounded-[24px] border border-[#dadce0]">
-                            <p className="text-[12px] font-medium text-[#5f6368] uppercase tracking-wider mb-1">חניכים רשומים</p>
-                            <div className="flex items-center justify-between">
-                                <span className="text-[36px] font-medium text-[#202124] tabular-nums">{stats.total}</span>
-                                <div className="bg-[#e8f0fe] text-[#1a73e8] p-3 rounded-full"><Users size={20} /></div>
-                            </div>
-                        </div>
-                        <div className="bg-white p-6 rounded-[24px] border border-[#dadce0]">
-                            <p className="text-[12px] font-medium text-[#5f6368] uppercase tracking-wider mb-1">ממוצע קורס</p>
-                            <div className="flex items-center justify-between">
-                                <span className="text-[36px] font-medium text-[#202124] tabular-nums">
-                                    {(stats.groupGrades.reduce((a, b) => a + parseFloat(b.avg), 0) / (stats.groupGrades.length || 1)).toFixed(1)}
-                                </span>
-                                <div className="bg-[#e8f0fe] text-[#1a73e8] p-3 rounded-full"><TrendingUp size={20} /></div>
-                            </div>
-                        </div>
-                        <div className="bg-white p-6 rounded-[24px] border border-[#dadce0] col-span-2">
-                            <p className="text-[12px] font-medium text-[#5f6368] uppercase tracking-wider mb-3">נוכחות במפגשים (כמות אבסולוטית)</p>
-                            <div className="grid grid-cols-4 gap-2">
-                                {stats.attByMeeting.map(m => (
-                                    <div key={m.meeting} className="text-center">
-                                        <div className="h-14 w-full bg-[#f8f9fa] rounded-lg border border-[#dadce0] relative overflow-hidden mb-1">
-                                            <div className="absolute bottom-0 left-0 right-0 bg-[#1a73e8]/30 transition-all duration-700" style={{ height: `${m.percent}% ` }}></div>
-                                            <div className="absolute inset-0 flex flex-col items-center justify-center z-10 leading-none">
-                                                <span className="text-[14px] font-medium text-[#202124]">{m.count}</span>
-                                                <span className="text-[9px] font-normal text-[#5f6368]">מתוך {stats.total}</span>
-                                            </div>
-                                        </div>
-                                        <p className="text-[10px] font-medium text-[#5f6368] truncate">{m.meeting}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <section className="bg-white rounded-[24px] border border-[#dadce0] overflow-hidden h-fit">
-                            <div className="p-5 bg-[#f8f9fa] border-b border-[#dadce0] flex items-center gap-2">
-                                <GraduationCap size={18} className="text-[#1a73e8]" />
-                                <span className="font-medium text-[#202124] text-[16px]">חניכים לפי בית ספר</span>
-                            </div>
-                            <div className="p-5 max-h-[450px] overflow-y-auto space-y-2.5">
-                                {Object.entries(stats.schools).sort((a, b) => b[1] - a[1]).map(([school, count]) => (
-                                    <div key={school} className="flex items-center justify-between p-3.5 bg-[#f8f9fa] rounded-lg border border-[#dadce0]">
-                                        <span className="font-normal text-[#3c4043] text-[14px]">{school}</span>
-                                        <span className="bg-white px-3 py-0.5 rounded-full font-medium text-[#1a73e8] border border-[#dadce0] text-[13px]">{count}</span>
-                                    </div>
-                                ))}
-                                {Object.entries(stats.schools).length === 0 && <div className="text-center py-10 italic text-[#5f6368]">אין נתונים להצגה</div>}
-                            </div>
-                        </section>
-
-                        <section className="bg-white rounded-[24px] border border-[#dadce0] overflow-hidden h-fit">
-                            <div className="p-5 bg-[#f8f9fa] border-b border-[#dadce0] flex items-center gap-2">
-                                <BarChart3 size={18} className="text-[#1a73e8]" />
-                                <span className="font-medium text-[#202124] text-[16px]">ביצועים לפי מחלקה</span>
-                            </div>
-                            <div className="p-5 overflow-x-auto max-h-[500px] overflow-y-auto">
-                                <table className="w-full text-right border-collapse">
-                                    <thead>
-                                        <tr className="text-[#5f6368] text-[12px] font-medium border-b border-[#dadce0]">
-                                            <th className="p-4 pt-0">מחלקה</th>
-                                            <th className="p-4 pt-0">חניכים</th>
-                                            <th className="p-4 pt-0 text-center">ממוצע ציונים</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-[#dadce0]">
-                                        {stats.groupGrades.map(g => (
-                                            <tr key={g.group} className="hover:bg-[#f8f9fa] transition-colors">
-                                                <td className="p-4 font-medium text-[#202124] text-[15px]">מחלקה {g.group}</td>
-                                                <td className="p-4 text-[#5f6368] text-[14px] font-normal">{g.studentCount} חניכים</td>
-                                                <td className="p-4 text-center">
-                                                    <span className="text-[20px] font-medium tabular-nums text-[#1a73e8]">
-                                                        {g.avg}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        {stats.groupGrades.length === 0 && (
-                                            <tr><td colSpan={3} className="text-center py-10 italic text-[#5f6368] font-normal text-[13px]">אין מחלקות פעילות</td></tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </section>
-                    </div>
-                </div>
+                <AdminAnalyticsView stats={stats} />
             )}
 
             {adminSubView === 'users' && (
-                <div className="space-y-6">
-                    <input type="file" ref={fileInputRef} className="hidden" accept=".csv" onChange={handleImportCSV} />
-                    <React.Suspense fallback={<div className="p-8 text-center text-[#5f6368] text-sm animate-pulse">טוען נתוני משתמשים...</div>}>
-                        <UserManagementTable
-                            usersList={uniqueUsersList}
-                            currentRole={profile?.role || 'admin'}
-                            onSelectStudent={(student) => handleSelectStudentProfile(student)}
-                            onEditUser={(user) => { setUserToEdit(user); setIsAddUserModalOpen(true); }}
-                            onDeleteUser={(userId) => deleteUser(userId)}
-                            onOpenAddModal={() => { setUserToEdit(null); setIsAddUserModalOpen(true); }}
-                            onImportCSV={() => fileInputRef.current?.click()}
-                            onExportCSV={handleExportCSV}
-                        />
-                    </React.Suspense>
-                </div>
+                <AdminUsersView
+                    uniqueUsersList={usersList}
+                    currentRole={(profile?.role || 'admin') as UserRole}
+                    onSelectStudent={(student) => handleSelectStudentProfile(student)}
+                    onEditUser={(user) => { setUserToEdit(user); setIsAddUserModalOpen(true); }}
+                    onDeleteUser={(userId) => deleteUser(userId)}
+                    onOpenAddModal={() => { setUserToEdit(null); setIsAddUserModalOpen(true); }}
+                    onExportCSV={handleExportCSV}
+                    fileInputRef={fileInputRef}
+                    handleImportCSV={handleImportCSV}
+                />
             )}
 
             {adminSubView === 'exams' && (
-                <div className="space-y-6" dir="rtl">
-                    <div className="flex items-center justify-between bg-white p-6 rounded-[24px] border border-[#dadce0]">
-                        <div>
-                            <h3 className="text-[20px] font-medium text-[#202124]">ניהול מבחנים והערכות ({exams.length})</h3>
-                            <p className="text-[12px] text-[#5f6368] font-normal">הגדרת מבחנים, משקלים (סכום 100), חשיפה לצוות ולחניכים</p>
-                        </div>
-                        <button
-                            onClick={() => { setExamToEdit(null); setIsExamModalOpen(true); }}
-                            className="h-10 px-6 bg-[#1a73e8] hover:bg-[#1967d2] text-white rounded-full font-medium text-[14px] flex items-center gap-1.5 transition-all shrink-0"
-                        >
-                            <Plus size={16} /> צור מבחן חדש
-                        </button>
-                    </div>
-
-                    <div className="bg-white rounded-[24px] overflow-hidden border border-[#dadce0]">
-                        <div className="divide-y divide-[#dadce0]">
-                            {exams.length === 0 ? (
-                                <div className="p-8 text-center text-[#5f6368] text-[14px] font-normal">אין מבחנים במערכת. לחץ על "צור מבחן חדש" כדי להתחיל.</div>
-                            ) : (
-                                exams.map((exam) => (
-                                    <div key={exam.id} className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-[#f8f9fa] transition-colors">
-                                        <div className="min-w-0 flex-1">
-                                            <h4 className="font-medium text-[16px] text-[#202124] flex items-center gap-2 flex-wrap">
-                                                <span>{exam.title}</span>
-                                                {exam.showVerbalOnly && (
-                                                    <span className="text-[11px] bg-[#f8f9fa] text-[#3c4043] border border-[#dadce0] px-2.5 py-0.5 rounded-full font-normal">
-                                                        לחניכים: הערכה מילולית בלבד
-                                                    </span>
-                                                )}
-                                            </h4>
-                                            <div className="text-[12px] text-[#5f6368] font-normal mt-1 truncate">
-                                                קטגוריות: {(exam.categories || []).map((c) => `${c.name} (${c.maxScore ?? c.max ?? 100} נק')`).join(', ')}
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-wrap items-center gap-2 shrink-0">
-                                            <button
-                                                onClick={async () => {
-                                                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'exams', exam.id), { isVisible: !exam.isVisible }, { merge: true });
-                                                    showToast(exam.isVisible ? "המבחן הוסתר מהצוות" : "המבחן נפתח לצוות");
-                                                }}
-                                                className={`px-3 py-1 rounded-full font-medium text-[12px] transition-colors flex items-center gap-1.5 whitespace-nowrap ${exam.isVisible ? 'bg-[#e8f0fe] text-[#1a73e8]' : 'bg-[#f1f3f4] text-[#5f6368] hover:bg-[#e8eaed]'}`}
-                                                title="פתיחת/הסתרת הזנת ציונים לצוות"
-                                            >
-                                                {exam.isVisible ? <Eye size={14} /> : <EyeOff size={14} />}
-                                                {exam.isVisible ? 'צוות: פתוח' : 'צוות: מוסתר'}
-                                            </button>
-
-                                            <button
-                                                onClick={async () => {
-                                                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'exams', exam.id), { isStudentVisible: !exam.isStudentVisible }, { merge: true });
-                                                    showToast(exam.isStudentVisible ? "הציונים הוסתרו מהחניכים" : "הציונים גלויים לחניכים");
-                                                }}
-                                                className={`px-3 py-1 rounded-full font-medium text-[12px] transition-colors flex items-center gap-1.5 whitespace-nowrap ${exam.isStudentVisible ? 'bg-[#e8f0fe] text-[#1a73e8]' : 'bg-[#f1f3f4] text-[#5f6368] hover:bg-[#e8eaed]'}`}
-                                                title="חשיפת ציונים לחניכים"
-                                            >
-                                                {exam.isStudentVisible ? <Eye size={14} /> : <EyeOff size={14} />}
-                                                {exam.isStudentVisible ? 'חניכים: גלוי' : 'חניכים: מוסתר'}
-                                            </button>
-
-                                            <button
-                                                onClick={async () => {
-                                                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'exams', exam.id), { showVerbalOnly: !exam.showVerbalOnly }, { merge: true });
-                                                    showToast(exam.showVerbalOnly ? "הורדת הגדרת הערכה מילולית בלבד" : "הוגדר: לחניכים תוצג הערכה מילולית בלבד");
-                                                }}
-                                                className={`px-3 py-1 rounded-full font-medium text-[12px] transition-colors flex items-center gap-1.5 whitespace-nowrap ${exam.showVerbalOnly ? 'bg-[#f8f9fa] text-[#3c4043] border border-[#dadce0]' : 'bg-[#f1f3f4] text-[#5f6368] hover:bg-[#e8eaed]'}`}
-                                                title="הצגת הערכה מילולית בלבד לחניכים"
-                                            >
-                                                <MessageSquare size={14} />
-                                                {exam.showVerbalOnly ? 'מילולי בלבד' : 'ציון + מילולי'}
-                                            </button>
-
-                                            <button
-                                                onClick={() => { setExamToEdit(exam); setIsExamModalOpen(true); }}
-                                                className="p-2 hover:bg-[#f8f9fa] text-[#5f6368] hover:text-[#202124] rounded-full transition-colors"
-                                                title="ערוך מבחן"
-                                            >
-                                                <Edit2 size={16} />
-                                            </button>
-                                            <button
-                                                onClick={async () => {
-                                                    if (window.confirm(`האם למחוק את המבחן "${exam.title}"?`)) {
-                                                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'exams', exam.id));
-                                                        showToast('המבחן שנבחר נמחק');
-                                                    }
-                                                }}
-                                                className="p-2 hover:bg-[#fce8e6] text-[#d93025] rounded-full transition-colors"
-                                                title="מחק מבחן"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    </div>
-                </div>
+                <AdminExamsView
+                    exams={exams}
+                    onOpenAddExam={() => { setExamToEdit(null); setIsExamModalOpen(true); }}
+                    onEditExam={(exam) => { setExamToEdit(exam); setIsExamModalOpen(true); }}
+                    onDeleteExam={async (exam) => {
+                        if (window.confirm(`האם למחוק את המבחן "${exam.title}"?`)) {
+                            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'exams', exam.id));
+                            showToast('המבחן שנבחר נמחק');
+                        }
+                    }}
+                    onToggleExamVisibility={async (exam) => {
+                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'exams', exam.id), { isVisible: !exam.isVisible }, { merge: true });
+                        showToast(exam.isVisible ? "המבחן הוסתר מהצוות" : "המבחן נפתח לצוות");
+                    }}
+                    onToggleStudentVisibility={async (exam) => {
+                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'exams', exam.id), { isStudentVisible: !exam.isStudentVisible }, { merge: true });
+                        showToast(exam.isStudentVisible ? "הציונים הוסתרו מהחניכים" : "הציונים גלויים לחניכים");
+                    }}
+                    onToggleVerbalOnly={async (exam) => {
+                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'exams', exam.id), { showVerbalOnly: !exam.showVerbalOnly }, { merge: true });
+                        showToast(exam.showVerbalOnly ? "הורדת הגדרת הערכה מילולית בלבד" : "הוגדר: לחניכים תוצג הערכה מילולית בלבד");
+                    }}
+                />
             )}
 
             {adminSubView === 'reports' && (
-                <div className="space-y-6">
-                    <div className="bg-white p-6 rounded-[24px] border border-[#dadce0] flex gap-6 items-end flex-wrap">
-                        <div className="flex-1 min-w-[200px]">
-                            <label className="text-[13px] font-medium text-[#3c4043] block mb-2 mr-1">חיפוש חניך</label>
-                            <div className="relative">
-                                <Search size={18} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#5f6368]" />
-                                <input
-                                    type="text"
-                                    placeholder="שם או טלפון..."
-                                    className="w-full h-10 pr-10 pl-4 rounded border border-[#dadce0] bg-white font-normal text-[13px] focus:border-[#1a73e8] focus:ring-1 focus:ring-[#1a73e8] transition-colors text-right text-[#202124] outline-none"
-                                    value={searchQuery}
-                                    onChange={e => setSearchQuery(e.target.value)}
-                                />
-                            </div>
-                        </div>
-                        <div className="flex-1 min-w-[200px]">
-                            <label htmlFor="department-filter" className="text-[13px] font-medium text-[#3c4043] block mb-2 mr-1">סנן לפי מחלקה</label>
-                            <select id="department-filter" aria-label="סנן לפי מחלקה" className="w-full h-10 px-3 rounded border border-[#dadce0] bg-white font-normal text-[13px] text-right text-[#3c4043] outline-none focus:border-[#1a73e8]" value={filterDept} onChange={e => setFilterDept(e.target.value)}>
-                                <option value="all">כל המחלקות</option>
-                                {[...new Set(uniqueUsersList.map(u => parseInt(String(u.group || 0), 10) || 0))].filter(g => g > 0).sort((a, b) => a - b).map(g => <option key={g} value={g.toString()}>מחלקה {g}</option>)}
-                            </select>
-                        </div>
-                        <button onClick={handleExportCSV} className="h-10 px-6 bg-[#1a73e8] hover:bg-[#1967d2] text-white rounded-full font-medium text-[14px] flex items-center gap-2 transition-all shrink-0"><Download size={18} /> ייצוא CSV</button>
-                    </div>
-                    <div className="bg-white rounded-[24px] border border-[#dadce0] overflow-hidden">
-                        <div className="overflow-x-auto max-h-[600px] overflow-y-auto" tabIndex={0} role="region" aria-label="טבלת נתוני דוחות">
-                            <table className="w-full text-right border-collapse" dir="rtl">
-                                <thead className="sticky top-0 z-10 bg-[#f8f9fa] border-b border-[#dadce0]">
-                                    <tr className="text-[#3c4043] text-[12px] font-semibold border-b border-[#dadce0]">
-                                        <th className="p-4">חניך</th>
-                                        <th className="p-4">מחלקה</th>
-                                        <th className="p-4">בית ספר</th>
-                                        <th className="p-2 text-center" colSpan={attendanceEvents.length}>נוכחות</th>
-                                        {exams.map(e => <th key={e.id} className="p-4 text-center">{e.title}</th>)}
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-[#dadce0]">
-                                    {filteredStudents.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={3 + attendanceEvents.length + exams.length} className="text-center p-8 text-[13px] font-normal text-[#5f6368]">
-                                                אין חניכים במערכת התואמים את המסננים הנבחרים.
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        filteredStudents.map(student => {
-                                            const studentId = student.id || student.phone || student.firestoreId || '';
-                                            const att = attendance[studentId] || {};
-                                            return (
-                                                <tr key={student.firestoreId || student.id || student.phone} className="hover:bg-[#f8f9fa] transition-colors group cursor-pointer" onClick={() => handleSelectStudentProfile(student)}>
-                                                    <td className="p-4 font-medium text-[#1a73e8] hover:underline text-[14px]">{student.name || student.fullName}</td>
-                                                    <td className="p-4 text-[#202124] font-normal text-[14px]">{student.group || 0}</td>
-                                                    <td className="p-4 text-[#5f6368] text-[13px] font-normal">{student.school || 'לא שויך'}</td>
-                                                    {attendanceEvents.map(ev => {
-                                                        const status = att[ev.id];
-                                                        const isPresent = status === true;
-                                                        const isMissing = status === 'missing' || status === 'חסר';
-                                                        const isAbsent = status === false;
-                                                        return (
-                                                            <td key={ev.id} className="p-1 text-center">
-                                                                <div
-                                                                    className={`mx-auto w-6 h-6 rounded-full flex items-center justify-center ${
-                                                                        isPresent
-                                                                            ? 'bg-[#188038] text-white'
-                                                                            : isMissing
-                                                                            ? 'bg-[#f9ab00] text-white'
-                                                                            : isAbsent
-                                                                            ? 'bg-[#d93025] text-white'
-                                                                            : 'bg-[#f8f9fa] text-[#5f6368]'
-                                                                    }`}
-                                                                    title={isPresent ? 'נכח' : isMissing ? 'חסר' : isAbsent ? 'נעדר' : 'לא דווח'}
-                                                                >
-                                                                    {isPresent && <Check size={12} />}
-                                                                    {isMissing && <div className="w-2 h-2 rounded-full bg-white" />}
-                                                                    {isAbsent && <X size={12} className="stroke-[2.5]" />}
-                                                                    {status === undefined && <span className="text-[10px]">-</span>}
-                                                                </div>
-                                                            </td>
-                                                        );
-                                                    })}
-                                                    {exams.map(exam => {
-                                                        const g = grades[`${studentId}_${exam.id}`];
-                                                        const total: number | null = g && g.scores
-                                                            ? Object.values(g.scores as Record<string, unknown>).reduce((a: number, b: unknown) => a + (parseInt(String(b || 0), 10) || 0), 0)
-                                                            : null;
-                                                        return (
-                                                            <td key={exam.id} className="p-4 text-center font-medium text-[16px] tabular-nums text-[#202124]">
-                                                                {total !== null ? <span className={total >= 85 ? 'text-emerald-600' : 'text-slate-900'}>{total}</span> : "--"}
-                                                            </td>
-                                                        );
-                                                    })}
-                                                </tr>
-                                            );
-                                        })
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+                <AdminReportsView
+                    uniqueUsersList={usersList}
+                    filteredStudents={filteredStudents}
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    filterDept={filterDept}
+                    setFilterDept={setFilterDept}
+                    attendanceEvents={attendanceEvents}
+                    attendance={attendance}
+                    exams={exams}
+                    grades={grades}
+                    handleSelectStudentProfile={(student) => handleSelectStudentProfile(student)}
+                    handleExportCSV={handleExportCSV}
+                />
             )}
 
+            {/* Global Modals */}
             <React.Suspense fallback={null}>
                 {selectedStudentProfile && (
                     <StudentProfileModal
@@ -727,7 +404,21 @@ export default function AdminView({
                         showToast={showToast}
                     />
                 )}
+
+                {isBulletinModalOpen && (
+                    <BulletinEditorModal
+                        isOpen={isBulletinModalOpen}
+                        onClose={() => setIsBulletinModalOpen(false)}
+                        showToast={showToast}
+                        currentUserName={profile.name || profile.fullName}
+                    />
+                )}
             </React.Suspense>
+
+            {/* Version Footer */}
+            <footer className="mt-8 mb-20 sm:mb-8 text-center text-[12px] text-[#5f6368] font-normal" aria-label="גרסת מערכת">
+                קורס הנהגה • גרסה 1.0.0
+            </footer>
 
             <MobileBottomNav
                 ariaLabel="ניווט מערכת ניהול למובייל"

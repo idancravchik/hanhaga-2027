@@ -305,34 +305,45 @@ export default function InstructorView({
                             return (
                                 <div key={studentKey} className="bg-white rounded-[24px] border border-[#dadce0] text-right overflow-hidden transition-all">
                                     {/* Collapsed Header Bar */}
-                                    <div
-                                        onClick={() => setExpandedStudentId(isExpanded ? null : studentKey)}
-                                        className="p-4 flex items-center justify-between cursor-pointer hover:bg-[#f8f9fa] transition-colors"
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <img src={getUserAvatar(student.role)} alt={student.name || student.fullName || ''} className="w-10 h-10 rounded-full border border-[#dadce0] object-cover" />
-                                            <div>
-                                                <h3 className="text-[16px] font-medium text-[#202124] leading-tight">{student.name || student.fullName}</h3>
-                                                <p className="text-[#5f6368] text-[12px] font-normal mt-0.5">מחלקה {student.group || 0} | {student.school || 'לא שויך'}</p>
+                                    <div className="p-4 flex items-center justify-between hover:bg-[#f8f9fa] transition-colors">
+                                        <button
+                                            type="button"
+                                            id={`student-accordion-${studentKey}`}
+                                            aria-expanded={isExpanded}
+                                            aria-controls={`student-panel-${studentKey}`}
+                                            onClick={() => setExpandedStudentId(isExpanded ? null : studentKey)}
+                                            className="flex-1 flex items-center justify-between text-right cursor-pointer bg-transparent border-0 p-0 m-0 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[#1a73e8] rounded-lg"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <img src={getUserAvatar(student.role)} alt={student.name || student.fullName || ''} className="w-10 h-10 rounded-full border border-[#dadce0] object-cover" />
+                                                <div>
+                                                    <h3 className="text-[16px] font-medium text-[#202124] leading-tight">{student.name || student.fullName}</h3>
+                                                    <p className="text-[#5f6368] text-[12px] font-normal mt-0.5">מחלקה {student.group || 0} | {student.school || 'לא שויך'}</p>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
+                                            <div className="ml-3">
+                                                {isExpanded ? <ChevronUp size={20} className="text-[#5f6368]" /> : <ChevronDown size={20} className="text-[#5f6368]" />}
+                                            </div>
+                                        </button>
+                                        <div className="flex items-center gap-2 mr-3 shrink-0">
                                             <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setSelectedStudentForModal(student);
-                                                }}
+                                                type="button"
+                                                onClick={() => setSelectedStudentForModal(student)}
                                                 className="h-8 px-3 rounded-full bg-[#e8f0fe] hover:bg-[#d2e3fc] text-[#1a73e8] font-medium text-[12px] flex items-center gap-1 transition-colors"
                                             >
                                                 <Eye size={14} /> תיק חניך
                                             </button>
-                                            {isExpanded ? <ChevronUp size={20} className="text-[#5f6368]" /> : <ChevronDown size={20} className="text-[#5f6368]" />}
                                         </div>
                                     </div>
 
                                     {/* Expanded Body */}
                                     {isExpanded && (
-                                        <div className="p-4 border-t border-[#dadce0] space-y-4 bg-[#f8f9fa]">
+                                        <div
+                                            id={`student-panel-${studentKey}`}
+                                            role="region"
+                                            aria-labelledby={`student-accordion-${studentKey}`}
+                                            className="p-4 border-t border-[#dadce0] space-y-4 bg-[#f8f9fa]"
+                                        >
                                             {studentTags.length > 0 && (
                                                 <div className="flex flex-wrap gap-1.5">
                                                     {studentTags.map((tag: UserTag, idx: number) => {

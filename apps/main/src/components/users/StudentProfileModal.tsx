@@ -35,9 +35,14 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
 
     const [personalNote, setPersonalNote] = useState(initialNote);
     const [isSavingNote, setIsSavingNote] = useState(false);
+    const [tags, setTags] = useState<any[]>(() => student?.tags || []);
     const [addingTag, setAddingTag] = useState(false);
     const [selectedTagId, setSelectedTagId] = useState('');
     const [tagDetail, setTagDetail] = useState('');
+
+    useEffect(() => {
+        setTags(student?.tags || []);
+    }, [student?.tags]);
 
     useEffect(() => {
         const currentContent = noteData?.content || noteData?.text || '';
@@ -75,7 +80,7 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
 
     const handleToggleTag = async (tagId: string, detail?: string) => {
         if (!isStaff) return;
-        const currentTags: any[] = student.tags || [];
+        const currentTags: any[] = tags || [];
         const exists = currentTags.some((t: any) => (typeof t === 'string' ? t === tagId : t.id === tagId));
 
         let updatedTags: any[];
@@ -89,7 +94,7 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
 
         try {
             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', studentId), { tags: updatedTags }, { merge: true });
-            student.tags = updatedTags;
+            setTags(updatedTags);
             setAddingTag(false);
             setSelectedTagId('');
             setTagDetail('');
@@ -150,10 +155,10 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({
 
                     {/* Tags List */}
                     <div className="flex flex-wrap gap-2 mb-3">
-                        {(student.tags || []).length === 0 ? (
+                        {(tags || []).length === 0 ? (
                             <span className="text-[12px] text-[#5f6368] italic">אין תגיות מוגדרות</span>
                         ) : (
-                            (student.tags || []).map((t: any, idx: number) => {
+                            (tags || []).map((t: any, idx: number) => {
                                 const tagId = typeof t === 'string' ? t : t.id;
                                 const catalogItem = TAGS_CATALOG.find((tc) => tc.id === tagId);
                                 const label = catalogItem?.label || tagId;

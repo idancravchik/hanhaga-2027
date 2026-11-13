@@ -79,8 +79,9 @@ export const EventBuilderModal: React.FC<EventBuilderModalProps> = ({ eventToEdi
                 <form onSubmit={handleSubmit} className="space-y-4">
                     {/* Title */}
                     <div className="space-y-1">
-                        <label className="text-[13px] font-medium text-[#3c4043] block">שם/כותרת האירוע</label>
+                        <label htmlFor="event-title" className="text-[13px] font-medium text-[#3c4043] block">שם/כותרת האירוע</label>
                         <input
+                            id="event-title"
                             type="text"
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
@@ -93,8 +94,9 @@ export const EventBuilderModal: React.FC<EventBuilderModalProps> = ({ eventToEdi
                     {/* Type & Date */}
                     <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1">
-                            <label className="text-[13px] font-medium text-[#3c4043] block">סוג אירוע</label>
+                            <label htmlFor="event-type" className="text-[13px] font-medium text-[#3c4043] block">סוג אירוע</label>
                             <select
+                                id="event-type"
                                 value={type}
                                 onChange={(e) => setType(e.target.value as EventType)}
                                 className="w-full h-10 px-3 border border-[#dadce0] rounded font-normal bg-white text-[#202124] text-[13px] outline-none focus:border-[#1a73e8]"
@@ -108,8 +110,9 @@ export const EventBuilderModal: React.FC<EventBuilderModalProps> = ({ eventToEdi
                         </div>
 
                         <div className="space-y-1">
-                            <label className="text-[13px] font-medium text-[#3c4043] block">תאריך ושעה</label>
+                            <label htmlFor="event-date" className="text-[13px] font-medium text-[#3c4043] block">תאריך ושעה</label>
                             <input
+                                id="event-date"
                                 type="datetime-local"
                                 value={date}
                                 onChange={(e) => setDate(e.target.value)}
@@ -121,10 +124,11 @@ export const EventBuilderModal: React.FC<EventBuilderModalProps> = ({ eventToEdi
 
                     {/* Location */}
                     <div className="space-y-1">
-                        <label className="text-[13px] font-medium text-[#3c4043] flex items-center gap-1">
+                        <label htmlFor="event-location" className="text-[13px] font-medium text-[#3c4043] flex items-center gap-1">
                             <MapPin size={14} className="text-[#1a73e8]" /> מיקום האירוע
                         </label>
                         <input
+                            id="event-location"
                             type="text"
                             value={location}
                             onChange={(e) => setLocation(e.target.value)}
@@ -135,10 +139,11 @@ export const EventBuilderModal: React.FC<EventBuilderModalProps> = ({ eventToEdi
 
                     {/* Description */}
                     <div className="space-y-1">
-                        <label className="text-[13px] font-medium text-[#3c4043] flex items-center gap-1">
+                        <label htmlFor="event-description" className="text-[13px] font-medium text-[#3c4043] flex items-center gap-1">
                             <FileText size={14} className="text-[#1a73e8]" /> תיאור ודגשים
                         </label>
                         <textarea
+                            id="event-description"
                             rows={2}
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}

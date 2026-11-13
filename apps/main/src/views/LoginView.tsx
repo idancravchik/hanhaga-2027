@@ -266,6 +266,13 @@ export const LoginView: React.FC<LoginViewProps> = ({ usersList, siteSettings, s
                         </button>
                     </form>
                 )}
+
+                {/* Application Version Tag */}
+                <div className="mt-6 pt-4 border-t border-[#f1f3f4] text-center" aria-label="פרטי גרסה">
+                    <span className="text-[12px] text-[#5f6368] font-normal tracking-wide">
+                        גרסה 1.0.0 • קורס הנהגה
+                    </span>
+                </div>
             </div>
         </div>
     );

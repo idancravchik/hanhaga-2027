@@ -110,8 +110,9 @@ export const ExamBuilderModal: React.FC<ExamBuilderModalProps> = ({ examToEdit, 
                 <form onSubmit={handleSubmit} className="space-y-5">
                     {/* Exam Title */}
                     <div className="space-y-1">
-                        <label className="text-[13px] font-medium text-[#3c4043] block">שם המבחן</label>
+                        <label htmlFor="exam-title" className="text-[13px] font-medium text-[#3c4043] block">שם המבחן</label>
                         <input
+                            id="exam-title"
                             type="text"
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
@@ -123,12 +124,13 @@ export const ExamBuilderModal: React.FC<ExamBuilderModalProps> = ({ examToEdit, 
 
                     {/* Show Verbal Only Toggle */}
                     <div className="flex items-center justify-between p-3 bg-[#f8f9fa] rounded border border-[#dadce0] text-[13px] font-normal text-[#3c4043]">
-                        <span>הצג לחניכים הערכה מילולית בלבד (ללא ציון מספרי)</span>
+                        <label htmlFor="exam-show-verbal-only" className="cursor-pointer flex-1">הצג לחניכים הערכה מילולית בלבד (ללא ציון מספרי)</label>
                         <input
+                            id="exam-show-verbal-only"
                             type="checkbox"
                             checked={showVerbalOnly}
                             onChange={(e) => setShowVerbalOnly(e.target.checked)}
-                            className="w-4 h-4 text-[#1a73e8] rounded focus:ring-[#1a73e8]"
+                            className="w-4 h-4 text-[#1a73e8] rounded focus:ring-[#1a73e8] cursor-pointer"
                         />
                     </div>
 
@@ -149,6 +151,8 @@ export const ExamBuilderModal: React.FC<ExamBuilderModalProps> = ({ examToEdit, 
                             {categories.map((cat, idx) => (
                                 <div key={idx} className="flex items-center gap-2">
                                     <input
+                                        id={`category-name-${idx}`}
+                                        aria-label={`שם קטגוריה ${idx + 1}`}
                                         type="text"
                                         placeholder="שם הקטגוריה"
                                         value={cat.name}
@@ -157,6 +161,8 @@ export const ExamBuilderModal: React.FC<ExamBuilderModalProps> = ({ examToEdit, 
                                         required
                                     />
                                     <input
+                                        id={`category-max-${idx}`}
+                                        aria-label={`משקל קטגוריה ${idx + 1}`}
                                         type="number"
                                         min="1"
                                         max="100"

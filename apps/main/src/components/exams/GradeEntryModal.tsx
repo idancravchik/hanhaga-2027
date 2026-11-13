@@ -101,12 +101,14 @@ export const GradeEntryModal: React.FC<GradeEntryModalProps> = ({
                         <label className="text-[13px] font-medium text-[#3c4043] block">ציונים לפי קטגוריות</label>
                         {exam.categories.map((cat, idx) => (
                             <div key={idx} className="flex items-center justify-between p-3 bg-[#f8f9fa] rounded-lg border border-[#dadce0]">
-                                <div>
+                                <label htmlFor={`score-input-${idx}`} className="cursor-pointer">
                                     <div className="font-medium text-[13px] text-[#202124]">{cat.name}</div>
                                     <div className="text-[11px] text-[#5f6368]">מקסימום: {cat.maxScore} נקודות</div>
-                                </div>
+                                </label>
                                 <div className="flex items-center gap-1">
                                     <input
+                                        id={`score-input-${idx}`}
+                                        aria-label={`ציון עבור ${cat.name}`}
                                         type="number"
                                         min="0"
                                         max={cat.maxScore}
@@ -129,11 +131,12 @@ export const GradeEntryModal: React.FC<GradeEntryModalProps> = ({
 
                     {/* Verbal Evaluation */}
                     <div className="space-y-1">
-                        <label className="text-[13px] font-medium text-[#3c4043] flex items-center gap-1.5">
+                        <label htmlFor="grade-verbal-comment" className="text-[13px] font-medium text-[#3c4043] flex items-center gap-1.5">
                             <MessageSquare size={14} className="text-[#1a73e8]" />
                             הערכה מילולית ומשוב אישי
                         </label>
                         <textarea
+                            id="grade-verbal-comment"
                             rows={3}
                             value={verbalComment}
                             onChange={(e) => setVerbalComment(e.target.value)}

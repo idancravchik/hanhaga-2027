@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Check, X, Search, UserCheck } from 'lucide-react';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, writeBatch } from 'firebase/firestore';
 import { signInAnonymously } from 'firebase/auth';
 import { db, auth, appId } from '@/config/firebase';
 import { CourseEvent, AttendanceMap, AttendanceStatus } from '@/types/event';
@@ -80,16 +80,23 @@ export const AttendanceReportTable: React.FC<AttendanceReportTableProps> = ({
                 await signInAnonymously(auth);
             }
 
-            // Save attendance for each student in Firestore under public/data/attendance/${studentId}
+            // Save attendance atomically in batches (Firestore limit: 500 per batch)
             const studentIds = Object.keys(tempAtt);
-            for (const sId of studentIds) {
-                const status = tempAtt[sId];
-                if (status !== undefined) {
-                    await setDoc(
-                        doc(db, 'artifacts', appId, 'public', 'data', 'attendance', sId),
-                        { [event.id]: status },
-                        { merge: true }
-                    );
+            const BATCH_SIZE = 500;
+            for (let i = 0; i < studentIds.length; i += BATCH_SIZE) {
+                const batch = writeBatch(db);
+                const chunk = studentIds.slice(i, i + BATCH_SIZE);
+                let opCount = 0;
+                for (const sId of chunk) {
+                    const status = tempAtt[sId];
+                    if (status !== undefined) {
+                        const ref = doc(db, 'artifacts', appId, 'public', 'data', 'attendance', sId);
+                        batch.set(ref, { [event.id]: status }, { merge: true });
+                        opCount++;
+                    }
+                }
+                if (opCount > 0) {
+                    await batch.commit();
                 }
             }
             setIsDirty(false);

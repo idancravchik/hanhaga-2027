@@ -57,7 +57,9 @@ export const parseUsersCSV = (fileText: string): CSVImportResult => {
         }
 
         const groupNum = parseInt(groupStr, 10);
-        const role = (roleStr ? roleStr.toLowerCase() : 'student') as UserRole;
+        const allowedRoles: UserRole[] = ['student', 'instructor', 'assistant', 'inspector', 'admin'];
+        const cleanRole = (roleStr ? roleStr.toLowerCase().trim() : 'student') as UserRole;
+        const role: UserRole = allowedRoles.includes(cleanRole) ? cleanRole : 'student';
 
         users.push({
             id: normPhone,
@@ -76,11 +78,11 @@ export const parseUsersCSV = (fileText: string): CSVImportResult => {
     return { users, errors, count };
 };
 
-const sanitizeCSVField = (val: any): string => {
+export const sanitizeCSVField = (val: any): string => {
     if (val === null || val === undefined) return '""';
     let str = String(val).replace(/"/g, '""');
-    // Prevent CSV/Excel formula injection (DDE) including tabs, returns, pipes, plus, minus, equals, at
-    if (/^[=+\-@\t\r\|]/.test(str) || /^[\s]+[=+\-@\t\r\|]/.test(str)) {
+    // Prevent CSV/Excel formula injection (DDE) if cell starts with =, +, -, @, tab, return, pipe (including after whitespace)
+    if (/^[\s]*[=+\-@\t\r\|]/.test(str)) {
         str = `'${str}`;
     }
     return `"${str}"`;
@@ -96,12 +98,12 @@ export const exportUsersToCSV = (
 ) => {
     const validEvents = (events || []).filter((e) => e.type !== 'יום חשיפה');
     const headers = [
-        'טלפון',
-        'שם',
-        'בית ספר',
-        'מחלקה/קבוצה',
-        ...validEvents.map((ev) => `נוכחות: ${ev.title || ev.id}`),
-        ...exams.map((ex) => `מבחן: ${ex.title || ex.id}`),
+        sanitizeCSVField('טלפון'),
+        sanitizeCSVField('שם'),
+        sanitizeCSVField('בית ספר'),
+        sanitizeCSVField('מחלקה/קבוצה'),
+        ...validEvents.map((ev) => sanitizeCSVField(`נוכחות: ${ev.title || ev.id}`)),
+        ...exams.map((ex) => sanitizeCSVField(`מבחן: ${ex.title || ex.id}`)),
     ];
 
     const rows = students.map((student) => {

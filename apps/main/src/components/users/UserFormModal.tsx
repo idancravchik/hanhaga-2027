@@ -143,8 +143,9 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ userToEdit, onClos
                 <form onSubmit={handleSubmit} className="space-y-4">
                     {/* Name */}
                     <div className="space-y-1">
-                        <label className="text-[13px] font-medium text-[#3c4043] block">שם מלא</label>
+                        <label htmlFor="user-name" className="text-[13px] font-medium text-[#3c4043] block">שם מלא</label>
                         <input
+                            id="user-name"
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
@@ -158,8 +159,9 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ userToEdit, onClos
 
                     {/* Phone */}
                     <div className="space-y-1">
-                        <label className="text-[13px] font-medium text-[#3c4043] block">מספר טלפון נייד</label>
+                        <label htmlFor="user-phone" className="text-[13px] font-medium text-[#3c4043] block">מספר טלפון נייד</label>
                         <input
+                            id="user-phone"
                             type="tel"
                             value={phone}
                             onChange={(e) => setPhone(e.target.value)}
@@ -175,9 +177,10 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ userToEdit, onClos
 
                     {/* School Search with Options Popping Upwards */}
                     <div className="space-y-1 relative" ref={schoolContainerRef}>
-                        <label className="text-[13px] font-medium text-[#3c4043] block">בית ספר</label>
+                        <label htmlFor="user-school" className="text-[13px] font-medium text-[#3c4043] block">בית ספר</label>
                         <div className="relative">
                             <input
+                                id="user-school"
                                 type="text"
                                 value={schoolQuery}
                                 onChange={(e) => {
@@ -238,8 +241,9 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ userToEdit, onClos
 
                     {/* Group */}
                     <div className="space-y-1">
-                        <label className="text-[13px] font-medium text-[#3c4043] block">מחלקה</label>
+                        <label htmlFor="user-group" className="text-[13px] font-medium text-[#3c4043] block">מחלקה</label>
                         <input
+                            id="user-group"
                             type="number"
                             min="0"
                             value={group}
@@ -254,8 +258,9 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ userToEdit, onClos
 
                     {/* Role */}
                     <div className="space-y-1">
-                        <label className="text-[13px] font-medium text-[#3c4043] block">תפקיד במערכת</label>
+                        <label htmlFor="user-role" className="text-[13px] font-medium text-[#3c4043] block">תפקיד במערכת</label>
                         <select
+                            id="user-role"
                             value={role}
                             onChange={(e) => setRole(e.target.value as UserRole)}
                             className="w-full h-10 px-3 border border-[#dadce0] rounded font-normal bg-white text-[#202124] text-[13px] outline-none focus:border-[#1a73e8]"
@@ -304,8 +309,10 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({ userToEdit, onClos
                             const cat = TAGS_CATALOG.find((c) => c.id === t.id);
                             return (
                                 <div key={t.id} className="flex items-center gap-2 bg-white p-2 rounded-lg border border-[#dadce0] text-[12px]">
-                                    <span className="font-medium text-[#c5221f] shrink-0">פירוט {cat?.label}:</span>
+                                    <label htmlFor={`tag-detail-${t.id}`} className="font-medium text-[#c5221f] shrink-0 cursor-pointer">פירוט {cat?.label}:</label>
                                     <input
+                                        id={`tag-detail-${t.id}`}
+                                        aria-label={`פירוט ${cat?.label}`}
                                         type="text"
                                         placeholder="למשל: בוטנים, אבקה, רמת חומרה..."
                                         value={t.detail || ''}

@@ -31,32 +31,56 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Config & Settings
+    // Config & Settings: Public read, authenticated writes protected against key tampering
     match /artifacts/{appId}/public/config {
+      allow read: if true;
+      allow write: if isAuthenticated() && (
+        request.auth.token.role == 'admin' ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isSiteClosed', 'staffLoginMethod', 'updatedAt'])
+      );
+    }
+    
+    // User Profiles:
+    // - Authenticated read for student login lookup & staff management
+    // - Safe creation with valid roles
+    // - Strict privilege escalation defense on update: cannot escalate role to admin
+    // - Protected deletion: cannot delete admin accounts without admin credentials
+    match /artifacts/{appId}/public/data/users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() &&
+        request.resource.data.keys().hasAll(['name', 'phone']) &&
+        (!('role' in request.resource.data) || request.resource.data.role in ['student', 'instructor', 'assistant', 'admin', 'inspector']);
+      allow update: if isAuthenticated() && (
+        // Non-role updates (e.g. tags, personal details) are allowed
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])) ||
+        // Existing admins can maintain their status
+        (resource.data.role == 'admin' && request.resource.data.role in ['student', 'instructor', 'assistant', 'admin', 'inspector']) ||
+        // Changing role between non-admin roles is allowed, but cannot escalate to admin
+        (request.resource.data.role in ['student', 'instructor', 'assistant', 'inspector']) ||
+        // Explicit admin claim
+        (request.auth.token.role == 'admin')
+      );
+      allow delete: if isAuthenticated() && (
+        resource.data.role != 'admin' || request.auth.token.role == 'admin'
+      );
+    }
+
+    // Exams: Readable by all, authenticated updates
+    match /artifacts/{appId}/public/data/exams/{examId} {
       allow read: if true;
       allow write: if isAuthenticated();
     }
-    
-    // User Profiles
-    match /artifacts/{appId}/public/data/users/{userId} {
-      allow read: if isAuthenticated();
-      allow create, update: if isAuthenticated() && (!('role' in request.resource.data) || request.resource.data.role in ['student', 'instructor', 'assistant', 'admin', 'inspector']);
-      allow delete: if isAuthenticated();
-    }
 
-    // Exams
-    match /artifacts/{appId}/public/data/exams/{examId} {
-      allow read, write: if isAuthenticated();
-    }
-
-    // Grades
+    // Grades: Backward-compatible score updates by instructors & reads by students/staff
     match /artifacts/{appId}/public/data/grades/{gradeId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
     }
 
-    // Attendance
+    // Attendance: Attendance recordings by instructors & student history reads
     match /artifacts/{appId}/public/data/attendance/{studentId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
     }
 
     // Internal Staff Notes (student tracking portfolio)
@@ -64,22 +88,19 @@ service cloud.firestore {
       allow read, write: if isAuthenticated();
     }
 
-    // Events & Meetings
+    // Events & Meetings: Public schedule read; authenticated updates
     match /artifacts/{appId}/public/data/events/{eventId} {
-      allow read, write: if isAuthenticated();
+      allow read: if true;
+      allow write: if isAuthenticated();
     }
 
-    // Bulletin Boards
+    // Bulletin Boards: Publicly viewable announcements; authenticated updates
     match /artifacts/{appId}/public/data/bulletin_boards/{boardId} {
-      allow read, write: if isAuthenticated();
+      allow read: if true;
+      allow write: if isAuthenticated();
     }
 
-    // Catch-all for any additional public/data collections under artifacts/{appId}
-    match /artifacts/{appId}/public/data/{collection}/{docId} {
-      allow read, write: if isAuthenticated();
-    }
-
-    // Default deny for everything else
+    // Default deny for everything else (removes open catch-all)
     match /{document=**} {
       allow read, write: if false;
     }

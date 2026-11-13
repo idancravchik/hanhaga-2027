@@ -38,3 +38,8 @@ apps/main/scripts/comprehensive-audit-v2.mjs
 apps/main/scripts/verify-fixes.mjs
 .audit-results/
 
+# Database Backups & Snapshots
+backups/
+*.backup.json
+
+

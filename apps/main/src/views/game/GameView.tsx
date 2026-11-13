@@ -30,22 +30,7 @@ export const GameView: React.FC = () => {
     }, 3000);
   }, []);
 
-  // Complete page scroll lock
-  useEffect(() => {
-    const prevBodyOverflow = document.body.style.overflow;
-    const prevHtmlOverflow = document.documentElement.style.overflow;
-    const prevBodyTouch = document.body.style.touchAction;
 
-    document.body.style.overflow = 'hidden';
-    document.documentElement.style.overflow = 'hidden';
-    document.body.style.touchAction = 'manipulation';
-
-    return () => {
-      document.body.style.overflow = prevBodyOverflow;
-      document.documentElement.style.overflow = prevHtmlOverflow;
-      document.body.style.touchAction = prevBodyTouch;
-    };
-  }, []);
 
   // Kiosk mode beforeunload & history trap
   useEffect(() => {

@@ -8,6 +8,9 @@ const __dirname = path.dirname(__filename)
 
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify('1.0.0')
+  },
   plugins: [react()],
   server: {
     host: '0.0.0.0',

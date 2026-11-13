@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { onAuthStateChanged, signInAnonymously, signOut, User } from 'firebase/auth';
+import { onAuthStateChanged, signInAnonymously, signInWithCustomToken, signOut, User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db, appId } from '@/config/firebase';
 import { UserProfile, UserRole } from '@/types/user';
@@ -108,17 +108,20 @@ const computeSHA256 = (str: string): string => {
 const isPasscodeValid = (passcode?: string | null): boolean => {
     if (!passcode) return false;
     const clean = passcode.trim();
+    if (computeSHA256(clean) === AUTHORIZED_PASSCODE_HASH) {
+        return true;
+    }
     const envPasscode = (import.meta.env.VITE_STAFF_PASSCODE || '').trim();
     if (envPasscode && clean === envPasscode) {
         return true;
     }
-    return computeSHA256(clean) === AUTHORIZED_PASSCODE_HASH;
+    return false;
 };
 
 const getStaffToken = (phone: string = '', passcode?: string) => {
     const normPhone = normalizePhone(phone);
     if (!normPhone) return '';
-    const secret = passcode?.trim() || (import.meta.env.VITE_STAFF_PASSCODE || '').trim() || AUTHORIZED_PASSCODE_HASH.substring(0, 16);
+    const secret = passcode?.trim() || AUTHORIZED_PASSCODE_HASH.substring(0, 16) || (import.meta.env.VITE_STAFF_PASSCODE || '').trim();
     try {
         return btoa(`${normPhone}:${secret}`);
     } catch {
@@ -131,8 +134,8 @@ const isValidStaffToken = (phone: string = '', token?: string): boolean => {
     const normPhone = normalizePhone(phone);
     const envPasscode = (import.meta.env.VITE_STAFF_PASSCODE || '').trim();
     const validTokens = [
-        envPasscode ? btoa(`${normPhone}:${envPasscode}`) : '',
-        btoa(`${normPhone}:${AUTHORIZED_PASSCODE_HASH.substring(0, 16)}`)
+        btoa(`${normPhone}:${AUTHORIZED_PASSCODE_HASH.substring(0, 16)}`),
+        envPasscode ? btoa(`${normPhone}:${envPasscode}`) : ''
     ].filter(Boolean);
 
     return validTokens.includes(token);
@@ -274,6 +277,38 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
         if (!normPhone || normPhone.length < 9 || normPhone.length > 10) {
             return { success: false, message: 'הכנס מספר טלפון תקין (9-10 ספרות)' };
+        }
+
+        // 1. Prioritize server-side authenticated login endpoint with custom token
+        try {
+            const res = await fetch('/api/v1/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: normName, phone: normPhone, mode: 'student' }),
+            });
+            if (res.ok) {
+                const json = await res.json();
+                if (json.success && json.data?.profile) {
+                    const serverProfile: UserProfile = json.data.profile;
+                    if (json.data.customToken) {
+                        try {
+                            await signInWithCustomToken(auth, json.data.customToken);
+                        } catch (tokenErr) {
+                            console.warn('signInWithCustomToken fallback to ensureAuth:', tokenErr);
+                            await ensureAuth();
+                        }
+                    } else {
+                        await ensureAuth();
+                    }
+                    setSessionProfile(serverProfile);
+                    return { success: true };
+                }
+            } else if (res.status === 400 || res.status === 401) {
+                const json = await res.json().catch(() => null);
+                return { success: false, message: json?.error?.message || UNIFORM_AUTH_ERROR };
+            }
+        } catch (serverErr) {
+            console.warn('[AUTH] Server endpoint unreachable, falling back to direct Firestore:', serverErr);
         }
 
         let found = (usersList || []).find((u) => {
@@ -435,6 +470,40 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (!normPhone || normPhone.length < 9 || normPhone.length > 10) {
             return { success: false, message: 'הכנס מספר טלפון תקין (9-10 ספרות)' };
         }
+
+        // 1. Prioritize server-side authenticated login endpoint with custom token
+        try {
+            const res = await fetch('/api/v1/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: normName, phone: normPhone, passcode, mode: 'staff' }),
+            });
+            if (res.ok) {
+                const json = await res.json();
+                if (json.success && json.data?.profile) {
+                    const serverProfile: UserProfile = json.data.profile;
+                    if (json.data.customToken) {
+                        try {
+                            await signInWithCustomToken(auth, json.data.customToken);
+                        } catch (tokenErr) {
+                            console.warn('signInWithCustomToken fallback to ensureAuth:', tokenErr);
+                            await ensureAuth();
+                        }
+                    } else {
+                        await ensureAuth();
+                    }
+                    setSessionProfile(serverProfile, passcode);
+                    return { success: true };
+                }
+            } else if (res.status === 400 || res.status === 401) {
+                const json = await res.json().catch(() => null);
+                return { success: false, message: json?.error?.message || UNIFORM_AUTH_ERROR };
+            }
+        } catch (serverErr) {
+            console.warn('[AUTH] Server staff login unreachable, falling back to direct client validation:', serverErr);
+        }
+
+        // 2. Fallback to client-side validation if offline or server unreachable
         if (!isPasscodeValid(passcode)) {
             return { success: false, message: 'קוד גישה סטטי שגוי' };
         }
